@@ -8,6 +8,7 @@ import { it } from "@/lib/i18n/it";
 import { useBeforeUnloadWarning } from "./hooks/useBeforeUnloadWarning";
 import { useUploadPipeline } from "./hooks/useUploadPipeline";
 import { queueErrorMessage } from "./lib/queue-messages";
+import { queueOutcome, sortQueue } from "./lib/queue-review";
 import { hasActiveUploads, useUploadQueue, type QueueStatus } from "./store/upload-queue.store";
 import { UploadQueueItem } from "./UploadQueueItem";
 
@@ -26,7 +27,9 @@ function useStatusAnnouncement() {
           const status =
             item.status === "failed"
               ? `${t.status.failed}. ${queueErrorMessage(item.errorCode)}`
-              : t.status[item.status];
+              : queueOutcome(item) === "attention"
+                ? `${t.attention}. ${t.attentionHint}`
+                : t.status[item.status];
           changes.push(t.announce(item.name, status));
         }
         previous.current = new Map(items.map((item) => [item.id, item.status]));
@@ -49,7 +52,8 @@ export function UploadQueue() {
   const titleRef = useRef<HTMLHeadingElement>(null);
   const announcement = useStatusAnnouncement();
 
-  const hasFinished = items.some((item) => item.status === "done" || item.status === "duplicate");
+  const hasFinished = items.some((item) => queueOutcome(item) === "ok");
+  const sorted = sortQueue(items);
 
   async function remove(id: string) {
     setRemoving(id);
@@ -91,7 +95,7 @@ export function UploadQueue() {
         </p>
       ) : (
         <ul className="flex flex-col gap-3">
-          {items.map((item) => (
+          {sorted.map((item) => (
             <UploadQueueItem
               key={item.id}
               item={item}

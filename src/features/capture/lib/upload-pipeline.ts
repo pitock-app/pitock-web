@@ -71,6 +71,7 @@ function toResult(detail: Schemas["ReceiptDetail"]): QueueResult {
     total: extraction?.total ?? null,
     currency: extraction?.currency ?? "EUR",
     category: extraction?.category ?? null,
+    confidence: extraction?.confidence ?? null,
   };
 }
 

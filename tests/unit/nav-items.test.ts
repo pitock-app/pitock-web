@@ -2,13 +2,8 @@ import { describe, expect, it } from "vitest";
 import { isNavItemActive, navItems } from "@/components/layout";
 
 describe("navItems", () => {
-  it("segue l'ordine Dashboard · Aggiungi · Scontrini · Impostazioni", () => {
-    expect(navItems.map((item) => item.href)).toEqual([
-      "/dashboard",
-      "/add",
-      "/receipts",
-      "/settings",
-    ]);
+  it("segue l'ordine Dashboard · Aggiungi · Scontrini (Impostazioni sta nel menu account)", () => {
+    expect(navItems.map((item) => item.href)).toEqual(["/dashboard", "/add", "/receipts"]);
   });
 
   it("mette in evidenza solo Aggiungi", () => {

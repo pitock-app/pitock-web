@@ -1,13 +1,13 @@
 import { AlertTriangle } from "lucide-react";
 import type { components } from "@/lib/api/schema";
+import { isLowConfidence } from "@/lib/extraction";
 import { formatNumber } from "@/lib/format";
 import { it } from "@/lib/i18n/it";
 
 type Schemas = components["schemas"];
 
 const t = it.receipt.extraction;
-/** Sotto questa soglia la confidenza è bassa e si avvisa l'utente. */
-export const LOW_CONFIDENCE = 0.6;
+export { LOW_CONFIDENCE } from "@/lib/extraction";
 
 export function providerLabel(provider: string | null | undefined): string {
   if (!provider) return t.notAvailable;
@@ -24,7 +24,7 @@ export function ExtractionMeta({
   extraction: Schemas["ExtractionDetail"];
   usage?: Schemas["ReceiptDetail"]["usage"];
 }) {
-  const lowConfidence = extraction.confidence !== null && extraction.confidence < LOW_CONFIDENCE;
+  const lowConfidence = isLowConfidence(extraction.confidence);
   const isLlm = extraction.method === "llm";
   const rows: [string, string][] = [[t.method, t.methods[extraction.method]]];
   if (isLlm) {

@@ -60,6 +60,26 @@ describe("UserMenu", () => {
     expect(await screen.findByTestId("user-email")).toHaveTextContent("anna@pitock.test");
   });
 
+  it("cliccando sull'email apre il menu con le impostazioni", async () => {
+    renderWithQuery(<UserMenu />);
+    await screen.findByTestId("user-email");
+
+    await userEvent.setup().click(screen.getByRole("button", { name: /^Menu account/ }));
+
+    expect(await screen.findByRole("menuitem", { name: "Provider AI" })).toHaveAttribute(
+      "href",
+      "/settings/ai",
+    );
+    expect(screen.getByRole("menuitem", { name: "Consumo token" })).toHaveAttribute(
+      "href",
+      "/settings/usage",
+    );
+    expect(screen.getByRole("menuitem", { name: "Account" })).toHaveAttribute(
+      "href",
+      "/settings/account",
+    );
+  });
+
   it("il logout chiude la sessione, svuota la cache e torna al login", async () => {
     const { queryClient } = renderWithQuery(<UserMenu />);
     await screen.findByTestId("user-email");

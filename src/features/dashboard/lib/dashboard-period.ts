@@ -112,6 +112,18 @@ export function previousRange(
       if (!isDateInput(filters.from) || !isDateInput(filters.to) || isRangeInvalid(filters)) {
         return null;
       }
+      // Mesi interi (come dallo slider): stesso numero di mesi interi subito prima.
+      const [fromYear, fromMonth, fromDay] = filters.from.split("-").map(Number);
+      const [toYear, toMonth, toDay] = filters.to.split("-").map(Number);
+      if (fromDay === 1 && toDay === lastDay(toYear, toMonth)) {
+        const count = (toYear - fromYear) * 12 + (toMonth - fromMonth) + 1;
+        const start = shiftMonth(fromYear, fromMonth, -count);
+        const end = shiftMonth(fromYear, fromMonth, -1);
+        return {
+          from: ymd(start.year, start.month, 1),
+          to: ymd(end.year, end.month, lastDay(end.year, end.month)),
+        };
+      }
       const days = daysBetween(filters.from, filters.to);
       return { from: addDays(filters.from, -days), to: addDays(filters.from, -1) };
     }
@@ -155,4 +167,58 @@ export function periodKeys(range: DateRange, granularity: StatsQuery["granularit
 export function percentChange(current: number, previous: number): number | null {
   if (previous === 0) return null;
   return ((current - previous) / previous) * 100;
+}
+
+/** Mesi dello slider: l'ultimo anno, dal mese di un anno fa a quello in corso. */
+export const SLIDER_MONTHS = 12;
+
+/** Chiavi "YYYY-MM" dei mesi dello slider, dal più vecchio al mese in corso. */
+export function sliderMonths(now: Date = new Date()): string[] {
+  const [year, month] = toRomeDateInput(now).split("-").map(Number);
+  return Array.from({ length: SLIDER_MONTHS }, (_, index) => {
+    const shifted = shiftMonth(year, month, index - (SLIDER_MONTHS - 1));
+    return ymd(shifted.year, shifted.month, 1).slice(0, 7);
+  });
+}
+
+function monthBounds(key: string): Required<DateRange> {
+  const [year, month] = key.split("-").map(Number);
+  return { from: ymd(year, month, 1), to: ymd(year, month, lastDay(year, month)) };
+}
+
+/**
+ * Posizione dei due cursori per il periodo scelto. Null se il periodo non è fatto di mesi
+ * interi dell'ultimo anno (es. date personalizzate a metà mese): allora valgono solo le date.
+ */
+export function sliderValue(
+  filters: DashboardFilters,
+  now: Date = new Date(),
+): [number, number] | null {
+  if (isRangeInvalid(filters)) return null;
+  const range = currentRange(filters, now);
+  if (!range.from || !range.to) return null;
+  const months = sliderMonths(now);
+  const start = months.findIndex((key) => monthBounds(key).from === range.from);
+  const end = months.findIndex((key) => monthBounds(key).to === range.to);
+  return start === -1 || end === -1 || start > end ? null : [start, end];
+}
+
+/**
+ * Periodo dai due cursori. Le selezioni che coincidono con un preset usano il preset, così il
+ * mese in corso si confronta con lo stesso tratto del mese prima.
+ */
+export function filtersFromSlider(
+  [start, end]: readonly [number, number],
+  now: Date = new Date(),
+): DashboardFilters {
+  const last = SLIDER_MONTHS - 1;
+  if (start === last && end === last) return { period: "this-month" };
+  if (start === last - 1 && end === last - 1) return { period: "last-month" };
+  if (start === 0 && end === last) return { period: "last-12-months" };
+  const months = sliderMonths(now);
+  return {
+    period: "custom",
+    from: monthBounds(months[start]).from,
+    to: monthBounds(months[end]).to,
+  };
 }

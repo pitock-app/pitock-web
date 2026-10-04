@@ -41,9 +41,12 @@ describe("UploadQueueItem", () => {
         total: 23.4,
         currency: "EUR",
         category: "alimentari",
+        confidence: 0.92,
       },
     });
     expect(screen.getByText("Pronto")).toBeVisible();
+    expect(screen.getByRole("listitem")).toHaveAttribute("data-outcome", "ok");
+    expect(screen.queryByTestId("queue-attention")).not.toBeInTheDocument();
     expect(screen.getByText("Esselunga")).toBeVisible();
     expect(screen.getByText("4 ott 2026")).toBeVisible();
     expect(screen.getByText(/23,40/)).toBeVisible();
@@ -58,6 +61,26 @@ describe("UploadQueueItem", () => {
     );
   });
 
+  it("una foto letta male è da controllare e invita a correggere", () => {
+    renderItem({
+      status: "done",
+      result: {
+        merchantName: null,
+        purchasedAt: "2026-10-04T10:00:00Z",
+        total: null,
+        currency: "EUR",
+        category: null,
+        confidence: 0.4,
+      },
+    });
+    expect(screen.getByText("Da controllare")).toBeVisible();
+    expect(screen.getByRole("listitem")).toHaveAttribute("data-outcome", "attention");
+    expect(screen.getByTestId("queue-attention")).toHaveTextContent(
+      "lettura poco affidabile, esercente non letto, totale non letto",
+    );
+    expect(screen.getByRole("link", { name: "Correggi" })).toBeVisible();
+  });
+
   it("in errore mostra il motivo in italiano con Riprova ed Elimina", async () => {
     const user = userEvent.setup();
     const handlers = renderItem({
@@ -66,6 +89,7 @@ describe("UploadQueueItem", () => {
       failedStep: "extraction",
     });
     expect(screen.getByText("La tua chiave API non è valida.")).toBeVisible();
+    expect(screen.getByRole("listitem")).toHaveAttribute("data-outcome", "failed");
     expect(screen.getByRole("link", { name: "Vai alle impostazioni" })).toHaveAttribute(
       "href",
       "/settings/ai",

@@ -76,18 +76,23 @@ test("il periodo scelto finisce nell'URL e aggiorna i valori", async ({ page }) 
   const responses = recordStats(page);
   await login(page, "/dashboard");
   // Il mese in corso può essere vuoto (dipende dalla data): si aspetta solo il selettore.
-  await expect(page.getByLabel("Periodo", { exact: true })).toBeVisible();
+  await expect(page.getByLabel("Dal", { exact: true })).toBeVisible();
 
-  await page.getByLabel("Periodo", { exact: true }).selectOption("custom");
-  await expect(page).toHaveURL(/\/dashboard\?period=custom$/);
+  // Le date personalizzate sono sempre disponibili, anche oltre l'anno dello slider.
   await page.getByLabel("Dal", { exact: true }).fill("2025-01-01");
   await page.getByLabel("Al", { exact: true }).fill("2026-12-31");
   await expect(page).toHaveURL(/period=custom&from=2025-01-01&to=2026-12-31$/);
   await expectKpis(page, await statsFor(responses, "2025-01-01"));
-  // Stessa durata subito prima: 730 giorni che finiscono il 31 dicembre 2024.
-  await statsFor(responses, "2023-01-02");
+  // Mesi interi: i 24 mesi subito prima, 2023 e 2024.
+  await statsFor(responses, "2023-01-01");
 
-  await page.getByLabel("Periodo", { exact: true }).selectOption("last-12-months");
+  // Lo slider copre l'ultimo anno: cursori sul mese in corso, poi l'iniziale in fondo a sinistra.
+  const start = page.getByRole("slider", { name: "Mese iniziale" });
+  await start.focus();
+  await page.keyboard.press("End");
+  await expect(page).toHaveURL(/\/dashboard$/);
+  await start.focus();
+  await page.keyboard.press("Home");
   await expect(page).toHaveURL(/\/dashboard\?period=last-12-months$/);
   await expect(page.getByRole("heading", { name: "Spesa per mese" })).toBeVisible();
 });

@@ -17,3 +17,12 @@ export async function login(page: Page, path = "/dashboard", email = E2E_EMAIL) 
 export function visibleUserEmail(page: Page) {
   return page.getByTestId("user-email").filter({ visible: true });
 }
+
+/** Apre il menu account (clic sul nome utente) e sceglie una voce delle impostazioni. */
+export async function openSettings(page: Page, item = "Provider AI") {
+  await page
+    .getByRole("button", { name: /^Menu account/ })
+    .filter({ visible: true })
+    .click();
+  await page.getByRole("menuitem", { name: item }).click();
+}

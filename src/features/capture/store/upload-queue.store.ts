@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import type { components } from "@/lib/api/schema";
+import { queueOutcome } from "../lib/queue-review";
 
 type Schemas = components["schemas"];
 
@@ -22,7 +23,7 @@ export type FailedStep = "upload" | "extraction" | "timeout";
 
 export type QueueResult = Pick<
   Schemas["ExtractionDetail"],
-  "merchantName" | "purchasedAt" | "total" | "currency" | "category"
+  "merchantName" | "purchasedAt" | "total" | "currency" | "category" | "confidence"
 >;
 
 export type QueueItem = {
@@ -66,8 +67,6 @@ export const ACTIVE_STATUSES: readonly QueueStatus[] = [
   "completing",
   "processing",
 ];
-
-const FINISHED_STATUSES: readonly QueueStatus[] = ["done", "duplicate"];
 
 export function canTransition(from: QueueStatus, to: QueueStatus): boolean {
   return TRANSITIONS[from].includes(to);
@@ -143,9 +142,8 @@ export const useUploadQueue = create<UploadQueueState>()((set, get) => ({
   },
 
   clearFinished() {
-    set((state) => ({
-      items: state.items.filter((entry) => !FINISHED_STATUSES.includes(entry.status)),
-    }));
+    // Quelli da controllare restano finché l'utente non li toglie a mano.
+    set((state) => ({ items: state.items.filter((entry) => queueOutcome(entry) !== "ok") }));
   },
 
   reset() {

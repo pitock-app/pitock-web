@@ -3,6 +3,10 @@ import userEvent from "@testing-library/user-event";
 import { HttpResponse, http } from "msw";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { DashboardView } from "@/features/dashboard";
+import {
+  filtersFromSlider,
+  serializeDashboardFilters,
+} from "@/features/dashboard/lib/dashboard-period";
 import type { components } from "@/lib/api/schema";
 import { createMockAuthProvider } from "@/lib/auth/mock-auth";
 import { formatCurrency } from "@/lib/format";
@@ -34,7 +38,7 @@ const money = (value: number) => formatCurrency(value).replace(/\s/g, " ");
 
 beforeEach(async () => {
   vi.clearAllMocks();
-  // Intervallo fisso: settembre 2026, confrontato con i 30 giorni prima (2–31 agosto).
+  // Intervallo fisso: settembre 2026, confrontato con il mese intero prima (agosto).
   nav.search = new URLSearchParams("period=custom&from=2026-09-01&to=2026-09-30");
   const auth = createMockAuthProvider();
   provider.current = auth;
@@ -107,12 +111,12 @@ describe("DashboardView", () => {
     await waitFor(() =>
       expect(screen.getByTestId("dashboard-kpi-change")).toHaveTextContent("+23,5%"),
     );
-    expect(screen.getByText("rispetto a 2–31 ago 2026")).toBeInTheDocument();
+    expect(screen.getByText("rispetto a 1–31 ago 2026")).toBeInTheDocument();
 
     expect(queries.map((query) => query.toString())).toEqual(
       expect.arrayContaining([
         "from=2026-09-01&to=2026-09-30&granularity=month",
-        "from=2026-08-02&to=2026-08-31&granularity=month",
+        "from=2026-08-01&to=2026-08-31&granularity=month",
       ]),
     );
 
@@ -207,15 +211,28 @@ describe("DashboardView", () => {
 
   it("scrive il periodo scelto nella query string", async () => {
     const user = userEvent.setup();
+    nav.search = new URLSearchParams();
     mockStats({ current: stats });
-    renderWithQuery(<DashboardView />);
-    await screen.findByTestId("dashboard-kpi-total");
-    await user.selectOptions(screen.getByLabelText("Periodo"), "last-month");
-    expect(nav.router.replace).toHaveBeenCalledWith("/dashboard?period=last-month", {
+    const first = renderWithQuery(<DashboardView />);
+    // Predefinito: questo mese, entrambi i cursori sull'ultimo mese.
+    const start = await screen.findByLabelText("Mese iniziale");
+    expect(start).toHaveAttribute("aria-valuenow", "11");
+    start.focus();
+    await user.keyboard("{Home}");
+    expect(nav.router.replace).toHaveBeenLastCalledWith("/dashboard?period=last-12-months", {
       scroll: false,
     });
-    await user.selectOptions(screen.getByLabelText("Periodo"), "this-month");
-    expect(nav.router.replace).toHaveBeenLastCalledWith("/dashboard", { scroll: false });
+    // Dagli ultimi 12 mesi, il cursore finale indietro di un mese: intervallo di mesi interi.
+    nav.search = new URLSearchParams("period=last-12-months");
+    first.unmount();
+    renderWithQuery(<DashboardView />);
+    (await screen.findByLabelText("Mese finale")).focus();
+    await user.keyboard("{ArrowLeft}");
+    const expected = serializeDashboardFilters(filtersFromSlider([0, 10]));
+    expect(expected.get("period")).toBe("custom");
+    expect(nav.router.replace).toHaveBeenLastCalledWith(`/dashboard?${expected}`, {
+      scroll: false,
+    });
   });
 
   it("due date di fila non si cancellano a vicenda", async () => {

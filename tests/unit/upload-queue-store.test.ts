@@ -51,6 +51,7 @@ describe("store della coda di upload", () => {
           total: 3.2,
           currency: "EUR",
           category: "ristorazione",
+          confidence: 0.9,
         },
       }),
     ).toBe(true);
@@ -99,5 +100,31 @@ describe("store della coda di upload", () => {
     transition(a, "duplicate", { duplicateOf: "x" });
     store.getState().clearFinished();
     expect(store.getState().items.map((entry) => entry.id)).toEqual([b]);
+  });
+
+  it("non rimuove i completati da controllare", () => {
+    const [a] = store.getState().add([{ file: file("a.jpg"), source: "camera" }]);
+    const { transition } = store.getState();
+    for (const status of [
+      "preparing",
+      "hashing",
+      "requesting",
+      "uploading",
+      "completing",
+      "processing",
+    ] as const)
+      transition(a, status);
+    transition(a, "done", {
+      result: {
+        merchantName: "Bar",
+        purchasedAt: "2026-10-04T10:00:00Z",
+        total: 3.2,
+        currency: "EUR",
+        category: null,
+        confidence: 0.3,
+      },
+    });
+    store.getState().clearFinished();
+    expect(store.getState().items.map((entry) => entry.id)).toEqual([a]);
   });
 });

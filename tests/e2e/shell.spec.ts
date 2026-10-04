@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { login } from "./helpers";
+import { login, openSettings } from "./helpers";
 
 test.beforeEach(async ({ page }) => {
   await login(page);
@@ -26,8 +26,13 @@ test("la navigazione visibile porta alle sezioni", async ({ page, isMobile }) =>
   await nav.getByRole("link", { name: isMobile ? "Aggiungi" : "Aggiungi scontrino" }).click();
   await expect(page).toHaveURL(/\/add$/);
 
-  await nav.getByRole("link", { name: "Impostazioni" }).click();
-  await expect(page).toHaveURL(/\/settings\/ai$/);
+  await expect(nav.getByRole("link", { name: "Impostazioni" })).toHaveCount(0);
+});
+
+test("le impostazioni si aprono dal menu account", async ({ page }) => {
+  await page.goto("/dashboard");
+  await openSettings(page, "Consumo token");
+  await expect(page).toHaveURL(/\/settings\/usage$/);
   await expect(page.getByRole("navigation", { name: "Sezioni delle impostazioni" })).toBeVisible();
 });
 

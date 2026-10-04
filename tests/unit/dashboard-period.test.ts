@@ -8,7 +8,12 @@ import {
   serializeDashboardFilters,
   toStatsQuery,
 } from "@/features/dashboard/lib/dashboard-period";
-import { currentRange } from "@/features/dashboard/lib/dashboard-period";
+import {
+  currentRange,
+  filtersFromSlider,
+  sliderMonths,
+  sliderValue,
+} from "@/features/dashboard/lib/dashboard-period";
 import { formatDayRange, formatPercentChange, formatPeriodKey } from "@/lib/format";
 
 // 4 ottobre 2026, mattina a Roma.
@@ -50,6 +55,11 @@ describe("periodo della dashboard", () => {
       to: "2026-03-09",
     });
     expect(previousRange({ period: "custom", from: "2026-03-10" }, now)).toBeNull();
+    // Mesi interi: lo stesso numero di mesi interi subito prima.
+    expect(previousRange({ period: "custom", from: "2026-03-01", to: "2026-05-31" }, now)).toEqual({
+      from: "2025-12-01",
+      to: "2026-02-28",
+    });
     // Fine mese: il 31 marzo si confronta con il 1–28 febbraio.
     expect(previousRange({ period: "this-month" }, new Date("2026-03-31T10:00:00Z"))).toEqual({
       from: "2026-02-01",
@@ -87,5 +97,41 @@ describe("periodo della dashboard", () => {
     expect(formatDayRange("2026-09-01", "2026-09-04")).toBe("1–4 set 2026");
     expect(formatDayRange("2025-10-01", "2026-09-30")).toBe("1 ott 2025 – 30 set 2026");
     expect(formatDayRange("2025-01-01", "2025-10-04")).toBe("1 gen – 4 ott 2025");
+  });
+});
+
+describe("slider dei mesi", () => {
+  it("copre l'ultimo anno fino al mese in corso", () => {
+    const months = sliderMonths(now);
+    expect(months).toHaveLength(12);
+    expect(months[0]).toBe("2025-11");
+    expect(months[11]).toBe("2026-10");
+  });
+
+  it("posiziona i cursori sui preset e sui mesi interi", () => {
+    expect(sliderValue({ period: "this-month" }, now)).toEqual([11, 11]);
+    expect(sliderValue({ period: "last-month" }, now)).toEqual([10, 10]);
+    expect(sliderValue({ period: "last-12-months" }, now)).toEqual([0, 11]);
+    expect(sliderValue({ period: "custom", from: "2026-03-01", to: "2026-05-31" }, now)).toEqual([
+      4, 6,
+    ]);
+  });
+
+  it("non posiziona i cursori su date a metà mese o fuori dall'anno", () => {
+    expect(sliderValue({ period: "custom", from: "2026-03-05", to: "2026-05-31" }, now)).toBeNull();
+    expect(sliderValue({ period: "custom", from: "2024-01-01", to: "2026-05-31" }, now)).toBeNull();
+    expect(sliderValue({ period: "custom", from: "2026-03-01" }, now)).toBeNull();
+    expect(sliderValue({ period: "this-year" }, now)).toBeNull();
+  });
+
+  it("traduce i cursori in preset o in un intervallo di mesi interi", () => {
+    expect(filtersFromSlider([11, 11], now)).toEqual({ period: "this-month" });
+    expect(filtersFromSlider([10, 10], now)).toEqual({ period: "last-month" });
+    expect(filtersFromSlider([0, 11], now)).toEqual({ period: "last-12-months" });
+    expect(filtersFromSlider([4, 6], now)).toEqual({
+      period: "custom",
+      from: "2026-03-01",
+      to: "2026-05-31",
+    });
   });
 });

@@ -1,5 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
-import { login, visibleUserEmail, E2E_EMAIL } from "./helpers";
+import { login, openSettings, visibleUserEmail, E2E_EMAIL } from "./helpers";
 
 /**
  * Percorso completo che non dipende dai dati finti: gira in modalità mock e contro il
@@ -10,7 +10,7 @@ import { login, visibleUserEmail, E2E_EMAIL } from "./helpers";
  */
 
 /** Navigazione principale visibile (sidebar su desktop, bottom nav su mobile). */
-async function goTo(page: Page, section: "Dashboard" | "Scontrini" | "Impostazioni") {
+async function goTo(page: Page, section: "Dashboard" | "Scontrini") {
   await page
     .getByRole("navigation", { name: "Navigazione principale" })
     .filter({ visible: true })
@@ -65,8 +65,9 @@ test("inserimento, correzione, lista, dashboard, impostazioni ed eliminazione", 
   await goTo(page, "Dashboard");
   await expect(page.getByTestId("dashboard-kpi-total")).toBeVisible({ timeout: 15_000 });
 
-  // Impostazioni.
-  await goTo(page, "Impostazioni");
+  // Impostazioni, dal menu account.
+  await openSettings(page);
+  await expect(page).toHaveURL(/\/settings\/ai$/);
   await expect(page.getByRole("radio", { name: /Pitock AI/ })).toBeVisible();
   const settingsNav = page.getByRole("navigation", { name: "Sezioni delle impostazioni" });
   await settingsNav.getByRole("link", { name: "Consumo token" }).click();
