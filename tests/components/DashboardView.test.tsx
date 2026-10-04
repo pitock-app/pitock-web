@@ -235,6 +235,27 @@ describe("DashboardView", () => {
     });
   });
 
+  it("le scorciatoie scelgono gli ultimi mesi fino a quello in corso", async () => {
+    const user = userEvent.setup();
+    nav.search = new URLSearchParams();
+    mockStats({ current: stats });
+    renderWithQuery(<DashboardView />);
+    expect(await screen.findByRole("button", { name: "1 mese" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    await user.click(screen.getByRole("button", { name: "6 mesi" }));
+    expect(nav.router.replace).toHaveBeenLastCalledWith(
+      `/dashboard?${serializeDashboardFilters(filtersFromSlider([6, 11]))}`,
+      { scroll: false },
+    );
+    expect(screen.getByRole("button", { name: "6 mesi" })).toHaveAttribute("aria-pressed", "true");
+    await user.click(screen.getByRole("button", { name: "1 anno" }));
+    expect(nav.router.replace).toHaveBeenLastCalledWith("/dashboard?period=last-12-months", {
+      scroll: false,
+    });
+  });
+
   it("due date di fila non si cancellano a vicenda", async () => {
     nav.search = new URLSearchParams("period=custom");
     mockStats({ current: stats });
