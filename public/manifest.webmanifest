@@ -1,0 +1,41 @@
+{
+  "id": "/dashboard",
+  "name": "Pitock",
+  "short_name": "Pitock",
+  "description": "Pitock raccoglie i tuoi scontrini, ne estrae i dati e ti mostra dove vanno i soldi.",
+  "lang": "it",
+  "start_url": "/dashboard",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#f8fafc",
+  "theme_color": "#f8fafc",
+  "icons": [
+    {
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/logo.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ],
+  "categories": [
+    "finance",
+    "productivity"
+  ]
+}

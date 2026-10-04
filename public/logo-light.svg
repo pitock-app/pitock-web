@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Pitock">
+  <g fill="none" stroke="#F8FAFC" stroke-width="3" stroke-linecap="round">
+    <path d="M22 26 L10 20 M22 34 L8 34 M22 42 L10 50"/>
+    <path d="M42 26 L54 20 M42 34 L56 34 M42 42 L54 50"/>
+    <path d="M28 12 L24 5 M36 12 L40 5"/>
+  </g>
+  <ellipse cx="32" cy="18" rx="7" ry="6" fill="#F8FAFC"/>
+  <ellipse cx="32" cy="38" rx="12" ry="16" fill="#F8FAFC"/>
+  <path d="M24 34 H40 M23 40 H41 M25 46 H39" stroke="#E8901A" stroke-width="2.5" stroke-linecap="round"/>
+  <circle cx="29.5" cy="17" r="1.6" fill="#E8901A"/>
+  <circle cx="34.5" cy="17" r="1.6" fill="#E8901A"/>
+</svg>

@@ -1,0 +1,17 @@
+.env
+.env.local
+.env*.local
+node_modules/
+.next/
+out/
+build/
+coverage/
+test-results/
+playwright-report/
+blob-report/
+playwright/.cache/
+*.tsbuildinfo
+.vercel
+.DS_Store
+.claude/
+.autopilot/

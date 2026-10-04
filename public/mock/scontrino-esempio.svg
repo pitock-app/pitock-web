@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="400" height="720" viewBox="0 0 400 720" font-family="monospace" font-size="18" fill="#1E293B">
+  <rect width="400" height="720" fill="#F1F5F9"/>
+  <path d="M40 20h320v660l-20 20-20-20-20 20-20-20-20 20-20-20-20 20-20-20-20 20-20-20-20 20-20-20-20 20-20-20-20 20-20-20-20 20z" fill="#FFFFFF" stroke="#CBD5E1"/>
+  <text x="200" y="80" text-anchor="middle" font-size="24" font-weight="bold">SCONTRINO DI ESEMPIO</text>
+  <text x="200" y="110" text-anchor="middle">Modalità demo · Pitock</text>
+  <line x1="60" y1="140" x2="340" y2="140" stroke="#94A3B8" stroke-dasharray="6 4"/>
+  <text x="60" y="180">PANE</text><text x="340" y="180" text-anchor="end">2,35</text>
+  <text x="60" y="215">LATTE</text><text x="340" y="215" text-anchor="end">1,49</text>
+  <text x="60" y="250">MELE</text><text x="340" y="250" text-anchor="end">3,20</text>
+  <text x="60" y="285">CAFFÈ</text><text x="340" y="285" text-anchor="end">4,99</text>
+  <line x1="60" y1="320" x2="340" y2="320" stroke="#94A3B8" stroke-dasharray="6 4"/>
+  <text x="60" y="360" font-weight="bold" font-size="22">TOTALE</text><text x="340" y="360" text-anchor="end" font-weight="bold" font-size="22">12,03</text>
+  <text x="60" y="400">IVA</text><text x="340" y="400" text-anchor="end">1,09</text>
+  <text x="200" y="600" text-anchor="middle" fill="#E8901A" font-weight="bold">GRAZIE E ARRIVEDERCI</text>
+</svg>
