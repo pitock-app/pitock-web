@@ -54,6 +54,10 @@ for (const theme of THEMES) {
     test("dashboard, scontrini e dettaglio", async ({ page }) => {
       await login(page);
       await applyTheme(page, theme);
+      // Periodo ampio: il mese in corso può essere vuoto, qui servono KPI e grafici.
+      await page.getByLabel("Periodo", { exact: true }).selectOption("custom");
+      await page.getByLabel("Dal", { exact: true }).fill("2025-01-01");
+      await page.getByLabel("Al", { exact: true }).fill("2026-12-31");
       await expect(page.getByTestId("dashboard-kpi-total")).toBeVisible();
       await expectNoViolations(page);
 

@@ -82,7 +82,7 @@ export function CategoryPie({ rows, total }: { rows: ByCategory; total: number }
         <div className="flex flex-col items-center gap-4 sm:flex-row">
           <div className="size-44 shrink-0" aria-hidden>
             <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
+              <PieChart accessibilityLayer={false}>
                 <Pie
                   data={slices}
                   dataKey="total"
@@ -92,6 +92,7 @@ export function CategoryPie({ rows, total }: { rows: ByCategory; total: number }
                   stroke="var(--card)"
                   strokeWidth={2}
                   isAnimationActive={false}
+                  rootTabIndex={-1}
                 >
                   {slices.map((slice) => (
                     <Cell key={slice.key} fill={slice.color} />

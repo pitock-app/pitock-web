@@ -172,7 +172,7 @@ describe("DashboardView", () => {
     mockStats({ current: emptyStats, allTime: stats });
     const { unmount } = renderWithQuery(<DashboardView />);
     expect(await screen.findByText("Nessuna spesa nel periodo")).toBeInTheDocument();
-    expect(screen.getByTestId("dashboard-kpi-total")).toHaveTextContent(money(0));
+    expect(screen.queryByTestId("dashboard-kpi-total")).not.toBeInTheDocument();
     unmount();
 
     mockStats({ current: emptyStats, allTime: emptyStats });

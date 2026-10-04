@@ -75,7 +75,8 @@ test("i valori mostrati coincidono con quelli della risposta", async ({ page }) 
 test("il periodo scelto finisce nell'URL e aggiorna i valori", async ({ page }) => {
   const responses = recordStats(page);
   await login(page, "/dashboard");
-  await expect(page.getByTestId("dashboard-kpi-total")).toBeVisible();
+  // Il mese in corso può essere vuoto (dipende dalla data): si aspetta solo il selettore.
+  await expect(page.getByLabel("Periodo", { exact: true })).toBeVisible();
 
   await page.getByLabel("Periodo", { exact: true }).selectOption("custom");
   await expect(page).toHaveURL(/\/dashboard\?period=custom$/);

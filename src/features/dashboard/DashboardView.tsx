@@ -121,6 +121,17 @@ export function DashboardView() {
         />
       );
     }
+    // Periodo senza scontrini: solo il messaggio, niente KPI a zero né grafici vuoti.
+    if (periodEmpty) {
+      return (
+        <EmptyState
+          icon={LayoutDashboard}
+          title={t.emptyPeriodTitle}
+          description={t.emptyPeriodDescription}
+          action={<AddReceiptLink />}
+        />
+      );
+    }
     const data = stats.data;
     return (
       <>
@@ -134,26 +145,17 @@ export function DashboardView() {
           previousError={previousStats.isError}
           onRetryPrevious={() => void previousStats.refetch()}
         />
-        {periodEmpty ? (
-          <EmptyState
-            icon={LayoutDashboard}
-            title={t.emptyPeriodTitle}
-            description={t.emptyPeriodDescription}
-            action={<AddReceiptLink />}
+        <div className="grid gap-4 lg:grid-cols-2">
+          <PeriodBars
+            rows={data.byPeriod}
+            granularity={data.granularity}
+            // Con i dati del periodo precedente ancora a schermo le chiavi non corrispondono.
+            keys={data.granularity === query.granularity ? keys : null}
           />
-        ) : (
-          <div className="grid gap-4 lg:grid-cols-2">
-            <PeriodBars
-              rows={data.byPeriod}
-              granularity={data.granularity}
-              // Con i dati del periodo precedente ancora a schermo le chiavi non corrispondono.
-              keys={data.granularity === query.granularity ? keys : null}
-            />
-            <CategoryPie rows={data.byCategory} total={data.totals.total} />
-            <TopMerchants rows={data.topMerchants} total={data.totals.total} />
-            <SourceSplit rows={data.bySource} total={data.totals.total} />
-          </div>
-        )}
+          <CategoryPie rows={data.byCategory} total={data.totals.total} />
+          <TopMerchants rows={data.topMerchants} total={data.totals.total} />
+          <SourceSplit rows={data.bySource} total={data.totals.total} />
+        </div>
       </>
     );
   };
