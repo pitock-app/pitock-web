@@ -1,7 +1,8 @@
+import { categories } from "@/lib/api/enums";
 import type { StatsQuery } from "@/lib/api/query-keys";
+import type { components } from "@/lib/api/schema";
 import { toRomeDateInput } from "@/lib/format";
 import {
-  addDays,
   daysBetween,
   isDateInput,
   lastDay,
@@ -11,7 +12,7 @@ import {
   type DateRange,
 } from "@/lib/period";
 
-/** Periodi della dashboard (niente "tutto": la variazione richiede un periodo precedente). */
+/** Periodi della dashboard. */
 export const dashboardPeriods = [
   "this-month",
   "last-month",
@@ -20,12 +21,16 @@ export const dashboardPeriods = [
   "custom",
 ] as const;
 export type DashboardPeriod = (typeof dashboardPeriods)[number];
+type Category = components["schemas"]["Category"];
 
 export type DashboardFilters = {
   period: DashboardPeriod;
   /** Solo con period = "custom" (YYYY-MM-DD). */
   from?: string;
   to?: string;
+  /** Filtri globali per negozio (nome esercente) e categoria. */
+  store?: string;
+  category?: Category;
 };
 
 export const defaultDashboardFilters: DashboardFilters = { period: "this-month" };
@@ -36,21 +41,31 @@ export function isDashboardPeriod(value: string | null | undefined): value is Da
 
 type ParamsLike = { get(name: string): string | null };
 
-/** Periodo dalla query string; i valori non validi tornano al predefinito. */
+const isCategory = (value: string | null): value is Category =>
+  (categories as readonly string[]).includes(value ?? "");
+
+/** Periodo e filtri dalla query string; i valori non validi tornano al predefinito. */
 export function parseDashboardFilters(params: ParamsLike): DashboardFilters {
   const param = params.get("period");
   const period = isDashboardPeriod(param) ? param : defaultDashboardFilters.period;
-  if (period !== "custom") return { period };
+  const store = params.get("store")?.trim().slice(0, 200);
+  const category = params.get("category");
+  const dimensions = {
+    ...(store ? { store } : {}),
+    ...(isCategory(category) ? { category } : {}),
+  };
+  if (period !== "custom") return { period, ...dimensions };
   const from = params.get("from");
   const to = params.get("to");
   return {
     period,
     ...(isDateInput(from) ? { from } : {}),
     ...(isDateInput(to) ? { to } : {}),
+    ...dimensions,
   };
 }
 
-/** Query string del periodo, senza il valore predefinito. */
+/** Query string del periodo e dei filtri, senza i valori predefiniti. */
 export function serializeDashboardFilters(filters: DashboardFilters): URLSearchParams {
   const params = new URLSearchParams();
   if (filters.period !== defaultDashboardFilters.period) params.set("period", filters.period);
@@ -58,6 +73,8 @@ export function serializeDashboardFilters(filters: DashboardFilters): URLSearchP
     if (filters.from) params.set("from", filters.from);
     if (filters.to) params.set("to", filters.to);
   }
+  if (filters.store) params.set("store", filters.store);
+  if (filters.category) params.set("category", filters.category);
   return params;
 }
 
@@ -70,79 +87,11 @@ export function currentRange(filters: DashboardFilters, now: Date = new Date()):
   return resolvePeriod(filters.period, filters, now);
 }
 
-/**
- * Periodo con cui confrontare la spesa. Per i periodi in corso (questo mese, quest'anno) si
- * confronta lo stesso tratto del periodo prima (1–4 ottobre con 1–4 settembre), non il mese intero.
- * Null se l'intervallo personalizzato non ha entrambe le date.
- */
-export function previousRange(
-  filters: DashboardFilters,
-  now: Date = new Date(),
-): Required<DateRange> | null {
-  const [year, month, day] = toRomeDateInput(now).split("-").map(Number);
-  switch (filters.period) {
-    case "this-month": {
-      const prev = shiftMonth(year, month, -1);
-      return {
-        from: ymd(prev.year, prev.month, 1),
-        to: ymd(prev.year, prev.month, Math.min(day, lastDay(prev.year, prev.month))),
-      };
-    }
-    case "last-month": {
-      const prev = shiftMonth(year, month, -2);
-      return {
-        from: ymd(prev.year, prev.month, 1),
-        to: ymd(prev.year, prev.month, lastDay(prev.year, prev.month)),
-      };
-    }
-    case "last-12-months": {
-      const start = shiftMonth(year, month, -23);
-      const end = shiftMonth(year, month, -12);
-      return {
-        from: ymd(start.year, start.month, 1),
-        to: ymd(end.year, end.month, lastDay(end.year, end.month)),
-      };
-    }
-    case "this-year":
-      return {
-        from: ymd(year - 1, 1, 1),
-        to: ymd(year - 1, month, Math.min(day, lastDay(year - 1, month))),
-      };
-    case "custom": {
-      if (!isDateInput(filters.from) || !isDateInput(filters.to) || isRangeInvalid(filters)) {
-        return null;
-      }
-      // Mesi interi (come dallo slider): stesso numero di mesi interi subito prima.
-      const [fromYear, fromMonth, fromDay] = filters.from.split("-").map(Number);
-      const [toYear, toMonth, toDay] = filters.to.split("-").map(Number);
-      if (fromDay === 1 && toDay === lastDay(toYear, toMonth)) {
-        const count = (toYear - fromYear) * 12 + (toMonth - fromMonth) + 1;
-        const start = shiftMonth(fromYear, fromMonth, -count);
-        const end = shiftMonth(fromYear, fromMonth, -1);
-        return {
-          from: ymd(start.year, start.month, 1),
-          to: ymd(end.year, end.month, lastDay(end.year, end.month)),
-        };
-      }
-      const days = daysBetween(filters.from, filters.to);
-      return { from: addDays(filters.from, -days), to: addDays(filters.from, -1) };
-    }
-  }
-}
-
 /** Oltre due anni (o senza data iniziale) le barre sono per anno, altrimenti per mese. */
-export function granularityOf(range: DateRange): StatsQuery["granularity"] {
+export function granularityOf(range: DateRange): NonNullable<StatsQuery["granularity"]> {
   if (!range.from) return "year";
   const to = range.to ?? toRomeDateInput();
   return daysBetween(range.from, to) > 731 ? "year" : "month";
-}
-
-export function toStatsQuery(range: DateRange): StatsQuery {
-  return {
-    ...(range.from ? { from: range.from } : {}),
-    ...(range.to ? { to: range.to } : {}),
-    granularity: granularityOf(range),
-  };
 }
 
 /**
@@ -161,12 +110,6 @@ export function periodKeys(range: DateRange, granularity: StatsQuery["granularit
     const { year, month } = shiftMonth(fromYear, fromMonth, index);
     return ymd(year, month, 1).slice(0, 7);
   });
-}
-
-/** Variazione percentuale; null se il periodo precedente non ha spese. */
-export function percentChange(current: number, previous: number): number | null {
-  if (previous === 0) return null;
-  return ((current - previous) / previous) * 100;
 }
 
 /** Mesi dello slider: l'ultimo anno, dal mese di un anno fa a quello in corso. */

@@ -1,12 +1,12 @@
 "use client";
 
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
-import type { components } from "@/lib/api/schema";
-import { formatCompactNumber, formatCurrency, formatNumber, formatPeriodKey } from "@/lib/format";
+import { formatCompactCurrency, formatCurrency, formatNumber, formatPeriodKey } from "@/lib/format";
 import { it } from "@/lib/i18n/it";
-import { ChartCard, DataTable } from "./ChartCard";
+import { axisTick, ChartCard, DataTable, tooltipStyle } from "./ChartCard";
+import type { Summary } from "./lib/dataset";
 
-type Stats = components["schemas"]["Stats"];
+type Stats = Pick<Summary, "byPeriod" | "granularity">;
 
 const t = it.dashboard;
 
@@ -66,29 +66,23 @@ export function PeriodBars({ rows, granularity, keys }: PeriodBarsProps) {
               <XAxis
                 dataKey="period"
                 tickFormatter={(value: string) => formatPeriodKey(value, "short")}
-                tick={{ fill: "var(--muted-foreground)", fontSize: 12 }}
+                tick={axisTick}
                 tickLine={false}
                 axisLine={{ stroke: "var(--border)" }}
                 minTickGap={8}
               />
               <YAxis
-                tickFormatter={formatCompactNumber}
-                tick={{ fill: "var(--muted-foreground)", fontSize: 12 }}
+                tickFormatter={formatCompactCurrency}
+                tick={axisTick}
                 tickLine={false}
                 axisLine={false}
-                width={44}
+                width={56}
               />
               <Tooltip
                 cursor={{ fill: "var(--muted)", opacity: 0.6 }}
                 labelFormatter={(label) => formatPeriodKey(String(label))}
                 formatter={(value) => [formatCurrency(Number(value)), t.amount]}
-                contentStyle={{
-                  background: "var(--popover)",
-                  color: "var(--popover-foreground)",
-                  border: "1px solid var(--border)",
-                  borderRadius: 8,
-                  fontSize: 12,
-                }}
+                contentStyle={tooltipStyle}
               />
               <Bar
                 dataKey="total"

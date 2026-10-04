@@ -38,6 +38,17 @@ export function formatCompactNumber(value: number): string {
   );
 }
 
+/** Importo compatto per gli assi dei grafici ("12 €", "1,2 Mila €"). */
+export function formatCompactCurrency(value: number): string {
+  return new Intl.NumberFormat(LOCALE, {
+    style: "currency",
+    currency: "EUR",
+    notation: "compact",
+    // Sotto i 10 € servono i centesimi: altrimenti 1,35 e 1,40 diventano entrambi "1,4 €".
+    maximumFractionDigits: Math.abs(value) < 10 ? 2 : 0,
+  }).format(value);
+}
+
 /** Numero di token con il separatore delle migliaia ("12.345"). */
 export function formatTokens(value: number): string {
   return formatNumber(Math.round(value), 0);

@@ -111,3 +111,32 @@ describe("handler MSW delle statistiche", () => {
     expect(after.totals.total).toBe(Math.round((before.totals.total + 10) * 100) / 100);
   });
 });
+
+describe("handler MSW del dataset", () => {
+  it("restituisce gli stessi scontrini delle statistiche, con le righe, dal più recente", async () => {
+    const response = await call("/stats/dataset?from=2026-01-01");
+    expect(response.status).toBe(200);
+    const dataset = (await response.json()) as Schemas["StatsDataset"];
+    const summary = await stats("?from=2026-01-01");
+    expect(dataset.truncated).toBe(false);
+    expect(dataset.receipts).toHaveLength(summary.totals.nReceipts);
+    expect(sum(dataset.receipts.map((r) => r.total ?? 0))).toBe(summary.totals.total);
+    const dates = dataset.receipts.map((r) => r.date);
+    expect([...dates].sort().reverse()).toEqual(dates);
+    // La spesa di esempio al supermercato ha le righe, con lo stesso prodotto in più negozi.
+    const ids = new Set(dataset.receipts.map((r) => r.id));
+    expect(dataset.items.length).toBeGreaterThan(0);
+    expect(dataset.items.every((item) => ids.has(item.receiptId))).toBe(true);
+    const milkStores = new Set(
+      dataset.items
+        .filter((item) => item.description === "LATTE INTERO 1L")
+        .map((item) => dataset.receipts.find((r) => r.id === item.receiptId)?.merchantName),
+    );
+    expect(milkStores.size).toBeGreaterThan(1);
+  });
+
+  it("rifiuta un intervallo al contrario", async () => {
+    const response = await call("/stats/dataset?from=2026-10-02&to=2026-10-01");
+    expect(response.status).toBe(400);
+  });
+});

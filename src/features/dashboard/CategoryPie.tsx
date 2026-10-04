@@ -1,63 +1,47 @@
 "use client";
 
+import { ChevronLeft } from "lucide-react";
+import { useState } from "react";
 import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts";
-import type { components } from "@/lib/api/schema";
+import { Button } from "@/components/ui/button";
 import { formatCurrency, formatNumber, formatShare } from "@/lib/format";
 import { it } from "@/lib/i18n/it";
-import { ChartCard, DataTable, shareOf } from "./ChartCard";
-
-type ByCategory = components["schemas"]["Stats"]["byCategory"];
+import { BarList } from "./BarList";
+import { ChartCard, DataTable, NoData, shareOf, tooltipStyle } from "./ChartCard";
+import { categoryColor } from "./lib/colors";
+import type { Summary } from "./lib/dataset";
+import type { Category, ProductStats } from "./lib/products";
 
 const t = it.dashboard;
 
-/** Colori del tema per le fette, in ordine fisso; "Altre categorie" è sempre grigio. */
-const SLICE_COLORS = [
-  "var(--chart-1)",
-  "var(--chart-2)",
-  "var(--chart-3)",
-  "var(--chart-4)",
-  "var(--chart-5)",
-];
-const OTHER_COLOR = "var(--muted-foreground)";
-
-export type Slice = { key: string; label: string; total: number; nReceipts: number; color: string };
+type CategoryPieProps = {
+  rows: Summary["byCategory"];
+  total: number;
+  /** Prodotti del periodo: al clic su una categoria si vedono quelli che la compongono. */
+  products: ProductStats[];
+};
 
 /**
- * Le prime 5 categorie per spesa, le altre riunite in "Altre categorie": oltre 6 fette
- * i colori non si distinguono più.
+ * Ciambella della spesa per categoria. Ogni categoria ha sempre lo stesso colore; la legenda
+ * riporta importi e quote e, al clic, apre il dettaglio dei prodotti della categoria.
  */
-export function toSlices(rows: ByCategory): Slice[] {
-  const sorted = [...rows].sort((a, b) => b.total - a.total);
-  const fits = sorted.length <= SLICE_COLORS.length + 1;
-  const shown = fits ? sorted : sorted.slice(0, SLICE_COLORS.length);
-  const slices: Slice[] = shown.map((row, index) => ({
-    key: row.category,
+export function CategoryPie({ rows, total, products }: CategoryPieProps) {
+  const [selected, setSelected] = useState<Category | null>(null);
+  const slices = rows.map((row) => ({
+    ...row,
     label: it.categories[row.category],
-    total: row.total,
-    nReceipts: row.nReceipts,
-    color: SLICE_COLORS[index] ?? OTHER_COLOR,
+    color: categoryColor(row.category),
   }));
-  if (!fits) {
-    const rest = sorted.slice(SLICE_COLORS.length);
-    slices.push({
-      key: "other",
-      label: t.otherCategories,
-      total: Math.round(rest.reduce((sum, row) => sum + row.total, 0) * 100) / 100,
-      nReceipts: rest.reduce((sum, row) => sum + row.nReceipts, 0),
-      color: OTHER_COLOR,
-    });
-  }
-  return slices;
-}
+  const active = selected && rows.some((row) => row.category === selected) ? selected : null;
+  const categoryProducts = active ? products.filter((p) => p.category === active) : [];
 
-/** Ciambella della spesa per categoria, con legenda che riporta importi e quote. */
-export function CategoryPie({ rows, total }: { rows: ByCategory; total: number }) {
-  const slices = toSlices(rows);
   return (
     <ChartCard
       id="by-category"
       title={t.byCategoryTitle}
-      description={t.byCategoryDescription}
+      description={
+        active ? t.categoryDrill.productsOf(it.categories[active]) : t.byCategoryDescription
+      }
       table={
         rows.length > 0 && (
           <DataTable
@@ -77,7 +61,32 @@ export function CategoryPie({ rows, total }: { rows: ByCategory; total: number }
       }
     >
       {slices.length === 0 ? (
-        <p className="text-muted-foreground py-6 text-center text-sm">{t.noData}</p>
+        <NoData>{t.noData}</NoData>
+      ) : active ? (
+        <div className="flex flex-col gap-3">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-11 self-start"
+            onClick={() => setSelected(null)}
+          >
+            <ChevronLeft aria-hidden />
+            {t.categoryDrill.back}
+          </Button>
+          {categoryProducts.length === 0 ? (
+            <NoData>{t.categoryDrill.none}</NoData>
+          ) : (
+            <BarList
+              rows={categoryProducts.map((p) => ({
+                key: p.key,
+                label: p.label,
+                value: p.totalSpent,
+                color: categoryColor(active),
+                detail: t.purchases(p.purchases),
+              }))}
+            />
+          )}
+        </div>
       ) : (
         <div className="flex flex-col items-center gap-4 sm:flex-row">
           <div className="size-44 shrink-0" aria-hidden>
@@ -93,40 +102,45 @@ export function CategoryPie({ rows, total }: { rows: ByCategory; total: number }
                   strokeWidth={2}
                   isAnimationActive={false}
                   rootTabIndex={-1}
+                  className="cursor-pointer"
+                  onClick={(_, index) => setSelected(slices[index]?.category ?? null)}
                 >
                   {slices.map((slice) => (
-                    <Cell key={slice.key} fill={slice.color} />
+                    <Cell key={slice.category} fill={slice.color} />
                   ))}
                 </Pie>
                 <Tooltip
                   formatter={(value) => formatCurrency(Number(value))}
-                  contentStyle={{
-                    background: "var(--popover)",
-                    color: "var(--popover-foreground)",
-                    border: "1px solid var(--border)",
-                    borderRadius: 8,
-                    fontSize: 12,
-                  }}
+                  contentStyle={tooltipStyle}
                 />
               </PieChart>
             </ResponsiveContainer>
           </div>
-          <ul className="flex w-full min-w-0 flex-col gap-2 text-sm" data-testid="category-legend">
-            {slices.map((slice) => (
-              <li key={slice.key} className="flex items-center gap-2">
-                <span
-                  className="size-3 shrink-0 rounded-sm"
-                  style={{ background: slice.color }}
-                  aria-hidden
-                />
-                <span className="min-w-0 flex-1 truncate">{slice.label}</span>
-                <span className="tabular-nums">{formatCurrency(slice.total)}</span>
-                <span className="text-muted-foreground w-12 text-right text-xs tabular-nums">
-                  {formatShare(shareOf(slice.total, total))}
-                </span>
-              </li>
-            ))}
-          </ul>
+          <div className="flex w-full min-w-0 flex-col gap-1">
+            <ul className="flex flex-col text-sm" data-testid="category-legend">
+              {slices.map((slice) => (
+                <li key={slice.category}>
+                  <button
+                    type="button"
+                    onClick={() => setSelected(slice.category)}
+                    className="hover:bg-muted/60 focus-visible:ring-ring/50 flex min-h-9 w-full items-center gap-2 rounded-md px-1 text-left outline-none focus-visible:ring-[3px]"
+                  >
+                    <span
+                      className="size-3 shrink-0 rounded-sm"
+                      style={{ background: slice.color }}
+                      aria-hidden
+                    />
+                    <span className="min-w-0 flex-1 truncate">{slice.label}</span>
+                    <span className="tabular-nums">{formatCurrency(slice.total)}</span>
+                    <span className="text-muted-foreground w-12 text-right text-xs tabular-nums">
+                      {formatShare(shareOf(slice.total, total))}
+                    </span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+            <p className="text-muted-foreground text-xs">{t.categoryDrill.hint}</p>
+          </div>
         </div>
       )}
     </ChartCard>

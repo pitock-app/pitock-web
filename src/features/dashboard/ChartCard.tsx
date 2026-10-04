@@ -11,21 +11,34 @@ type ChartCardProps = {
   children: ReactNode;
   /** Tabella dei dati, per chi non legge il grafico. */
   table?: ReactNode;
+  /** Controlli accanto al titolo (es. scelta del prodotto). */
+  actions?: ReactNode;
   className?: string;
 };
 
 /** Riquadro di un grafico della dashboard, con titolo, descrizione e tabella dei dati. */
-export function ChartCard({ id, title, description, children, table, className }: ChartCardProps) {
+export function ChartCard({
+  id,
+  title,
+  description,
+  children,
+  table,
+  actions,
+  className,
+}: ChartCardProps) {
   return (
     <section
       aria-labelledby={`${id}-title`}
       className={cn("bg-card flex min-w-0 flex-col gap-3 rounded-xl border p-4", className)}
     >
-      <div>
-        <h2 id={`${id}-title`} className="font-semibold">
-          {title}
-        </h2>
-        <p className="text-muted-foreground text-sm">{description}</p>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0 flex-1 basis-60">
+          <h3 id={`${id}-title`} className="font-semibold">
+            {title}
+          </h3>
+          <p className="text-muted-foreground text-sm">{description}</p>
+        </div>
+        {actions}
       </div>
       {children}
       {table && (
@@ -88,4 +101,21 @@ export function DataTable({ caption, headers, rows }: DataTableProps) {
 /** Quota percentuale di un importo sul totale ("42%"). */
 export function shareOf(value: number, total: number): number {
   return total > 0 ? (value / total) * 100 : 0;
+}
+
+/** Stile dei tooltip di Recharts, uguale in tutti i grafici. */
+export const tooltipStyle = {
+  background: "var(--popover)",
+  color: "var(--popover-foreground)",
+  border: "1px solid var(--border)",
+  borderRadius: 8,
+  fontSize: 12,
+};
+
+/** Etichette degli assi: testo secondario, niente trattini. */
+export const axisTick = { fill: "var(--muted-foreground)", fontSize: 12 };
+
+/** Messaggio di grafico senza dati. */
+export function NoData({ children }: { children: ReactNode }) {
+  return <p className="text-muted-foreground py-6 text-center text-sm">{children}</p>;
 }

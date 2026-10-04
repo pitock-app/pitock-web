@@ -3,6 +3,9 @@ import type { paths } from "./schema";
 
 export type UsageQuery = NonNullable<paths["/v1/usage"]["get"]["parameters"]["query"]>;
 export type StatsQuery = NonNullable<paths["/v1/stats"]["get"]["parameters"]["query"]>;
+export type StatsDatasetQuery = NonNullable<
+  paths["/v1/stats/dataset"]["get"]["parameters"]["query"]
+>;
 type Provider = paths["/v1/settings/ai/models"]["get"]["parameters"]["query"]["provider"];
 
 export type ReceiptListQuery = Omit<
@@ -22,6 +25,7 @@ export const queryKeys = {
     /** Sotto "receipts": ogni modifica agli scontrini invalida anche le statistiche. */
     allStats: () => ["receipts", "stats"] as const,
     stats: (query: StatsQuery) => ["receipts", "stats", query] as const,
+    dataset: (query: StatsDatasetQuery) => ["receipts", "stats", "dataset", query] as const,
   },
   settings: {
     ai: () => ["settings", "ai"] as const,

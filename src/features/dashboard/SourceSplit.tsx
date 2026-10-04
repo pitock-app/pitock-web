@@ -1,27 +1,25 @@
-import type { components } from "@/lib/api/schema";
+import { formatShare } from "@/lib/format";
 import { it } from "@/lib/i18n/it";
 import { BarList } from "./BarList";
-import { ChartCard } from "./ChartCard";
-
-type Stats = components["schemas"]["Stats"];
+import { ChartCard, NoData, shareOf } from "./ChartCard";
+import type { Summary } from "./lib/dataset";
 
 const t = it.dashboard;
 
 /** Ripartizione della spesa per sorgente: Foto, File, Manuale. */
-export function SourceSplit({ rows, total }: { rows: Stats["bySource"]; total: number }) {
-  const sorted = [...rows].sort((a, b) => b.total - a.total);
+export function SourceSplit({ rows, total }: { rows: Summary["bySource"]; total: number }) {
   return (
     <ChartCard id="by-source" title={t.bySourceTitle} description={t.bySourceDescription}>
-      {sorted.length === 0 ? (
-        <p className="text-muted-foreground py-6 text-center text-sm">{t.noData}</p>
+      {rows.length === 0 ? (
+        <NoData>{t.noData}</NoData>
       ) : (
         <BarList
-          total={total}
-          rows={sorted.map((row) => ({
+          rows={rows.map((row) => ({
             key: row.source,
             label: it.receiptSources[row.source],
-            total: row.total,
-            nReceipts: row.nReceipts,
+            value: row.total,
+            color: "var(--chart-2)",
+            detail: `${t.receipts(row.nReceipts)} · ${formatShare(shareOf(row.total, total))}`,
           }))}
         />
       )}

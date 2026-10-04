@@ -632,14 +632,6 @@ export const it = {
     total: "Totale speso",
     count: "Scontrini",
     average: "Scontrino medio",
-    change: "Variazione",
-    changeVs: (range: string) => `rispetto a ${range}`,
-    changeNotAvailable: "n/d",
-    changeNoPrevious: "nessuna spesa nel periodo precedente",
-    changeNoRange: "scegli inizio e fine per il confronto",
-    changeLoadError: "Confronto non disponibile.",
-    changeUp: "In aumento",
-    changeDown: "In calo",
     receipts: (count: number) => (count === 1 ? "1 scontrino" : `${count} scontrini`),
     chartTable: "Dati del grafico",
     share: "Quota",
@@ -652,7 +644,7 @@ export const it = {
     byPeriodDescription: "Totale speso in ogni periodo.",
     periodColumn: { month: "Mese", year: "Anno" },
     topMerchantsTitle: "Esercenti principali",
-    topMerchantsDescription: "I 5 esercenti dove hai speso di più.",
+    topMerchantsDescription: "Gli esercenti dove hai speso di più.",
     merchant: "Esercente",
     bySourceTitle: "Per sorgente",
     bySourceDescription: "Come sono stati inseriti gli scontrini.",
@@ -664,6 +656,150 @@ export const it = {
     emptyPeriodTitle: "Nessuna spesa nel periodo",
     emptyPeriodDescription: "Scegli un altro periodo oppure aggiungi uno scontrino.",
     addReceipt: "Aggiungi scontrino",
+    showAll: (count: number) => `Mostra tutti (${count})`,
+    showLess: "Mostra meno",
+    truncated:
+      "Il periodo ha troppi scontrini: i grafici usano solo i 5.000 più recenti. Scegli un periodo più breve.",
+    filters: {
+      label: "Filtri",
+      store: "Negozio",
+      allStores: "Tutti i negozi",
+      category: "Categoria",
+      allCategories: "Tutte le categorie",
+      clear: "Togli i filtri",
+      active: (count: number) => (count === 1 ? "1 filtro attivo" : `${count} filtri attivi`),
+      emptyTitle: "Nessuno scontrino con questi filtri",
+      emptyDescription: "Nel periodo scelto non ci sono spese per questo negozio o categoria.",
+    },
+    sections: {
+      summary: "In sintesi",
+      summaryDescription: "Come sta andando il mese e quanto potresti risparmiare.",
+      overview: "Andamento generale",
+      overviewDescription: "Dove vanno i soldi nel periodo scelto: mesi, categorie, negozi.",
+      products: "Prodotto per prodotto",
+      productsDescription:
+        "Dalle righe degli scontrini: quali prodotti pesano di più e dove li paghi meno.",
+    },
+    forecast: {
+      title: "Previsione mese corrente",
+      spent: "Speso finora",
+      projected: "Previsti a fine mese",
+      dayOf: (day: number, days: number) => `Giorno ${day} di ${days}`,
+      indicative: "Stima indicativa",
+      reasonNoHistory:
+        "Nessuno storico dei mesi precedenti: la stima segue solo il ritmo di questo mese.",
+      reasonEarly: (months: number) =>
+        months < 2
+          ? "Inizio mese e poco storico: la stima può cambiare molto."
+          : "Inizio mese: la stima si basa soprattutto sui mesi passati.",
+      reasonShortHistory: (months: number) =>
+        months === 1 ? "Basata su 1 solo mese di storico." : `Basata su ${months} mesi di storico.`,
+      vsAverage: "rispetto alla media",
+      vsPrevious: "rispetto al mese scorso",
+      averageOf: (months: number) =>
+        months === 0
+          ? "Media mensile"
+          : months === 1
+            ? "Media dell'ultimo mese"
+            : `Media degli ultimi ${months} mesi`,
+      previousMonth: "Mese scorso",
+      noComparison: "n/d",
+      method: (daily: string, weight: number) =>
+        `Ritmo usato per i giorni che mancano: ${daily} al giorno (${weight}% dal ritmo di questo mese, il resto dalla media dei mesi passati).`,
+      pendingRecurring: "Spese ricorrenti non ancora arrivate, incluse nella previsione",
+      chartLabel: "Spesa cumulata del mese",
+      actual: "Speso",
+      projection: "Proiezione",
+      average: "Media mensile",
+      day: (day: number) => `Giorno ${day}`,
+      filtered: "Calcolata sui filtri di negozio e categoria attivi.",
+      loadError: "Previsione non disponibile.",
+    },
+    savings: {
+      title: "Risparmio potenziale",
+      description:
+        "Se avessi pagato ogni prodotto sempre al miglior prezzo registrato nel periodo.",
+      products: (count: number) => (count === 1 ? "su 1 prodotto" : `su ${count} prodotti`),
+      none: "Nessuna differenza di prezzo: servono prodotti comprati più volte.",
+      ofSpend: (share: string) => `${share} della spesa per prodotti`,
+    },
+    product: "Prodotto",
+    store: "Negozio",
+    price: "Prezzo",
+    unknownStore: "Negozio sconosciuto",
+    perUnit: { pz: "/pz", kg: "/kg", l: "/l" } as Record<string, string>,
+    purchases: (count: number) => (count === 1 ? "1 acquisto" : `${count} acquisti`),
+    noProducts:
+      "Nessuna riga prodotto nel periodo: gli scontrini letti dall'AI o inseriti con le righe compaiono qui.",
+    tips: {
+      title: "Consigli di risparmio",
+      description: "Generati dai tuoi scontrini, dal più conveniente.",
+      none: "Ancora nessun consiglio: servono prodotti comprati più volte o in negozi diversi.",
+      store: (product: string, gap: string, cheaper: string, pricier: string) =>
+        `${product} costa il ${gap} in meno da ${cheaper} che da ${pricier}.`,
+      format: (type: string, cheaper: string, gap: string, unit: string, pricier: string) =>
+        `${type}: ${cheaper} costa il ${gap} in meno al ${unit} di ${pricier}.`,
+      increase: (product: string, change: string, since: string) =>
+        `${product} è rincarato del ${change} dal ${since}.`,
+      bestPrice: (product: string, price: string, where: string, saving: string) =>
+        `${product}: pagandolo sempre ${price}${where} avresti risparmiato ${saving}.`,
+      at: (merchant: string) => ` (${merchant})`,
+    },
+    topProducts: {
+      title: "Dove finiscono i soldi",
+      description: "I prodotti su cui hai speso di più nel periodo.",
+    },
+    savingsRanking: {
+      title: "Dove perdi di più",
+      description:
+        "Differenza tra quanto hai pagato e il miglior prezzo registrato per lo stesso prodotto.",
+      detail: (best: string, where: string) => `miglior prezzo ${best}${where}`,
+    },
+    storeComparison: {
+      title: "Stesso prodotto, negozi diversi",
+      description: "Prezzo medio per negozio; in verde il più economico.",
+      none: "Nessun prodotto con la stessa descrizione comprato in due negozi diversi. Negozi diversi scrivono lo stesso prodotto in modo diverso: il confronto funziona solo quando le descrizioni coincidono.",
+      cheaperBy: (gap: string) => `${gap} in meno`,
+    },
+    priceChanges: {
+      title: "Rincari e ribassi",
+      description: "Variazione del prezzo tra il primo e l'ultimo acquisto nel periodo.",
+      none: "Nessun prodotto comprato in giorni diversi con un prezzo cambiato.",
+      detail: (from: string, to: string, first: string, last: string) =>
+        `${first} il ${from} → ${last} il ${to}`,
+      change: "Variazione",
+    },
+    priceHistory: {
+      title: "Andamento del prezzo",
+      description: "Il prezzo pagato a ogni acquisto, per negozio.",
+      search: "Cerca un prodotto",
+      select: "Prodotto",
+      onlyOne: "Un solo acquisto: servono almeno due acquisti per vedere un andamento.",
+      none: "Nessun prodotto comprato più di una volta nel periodo.",
+      date: "Data",
+    },
+    unitPrices: {
+      title: "Prezzo al kg e al litro",
+      description:
+        "Formati e marche dello stesso tipo di prodotto (stessa prima parola) confrontati sul prezzo al kg o al litro.",
+      none: 'Servono almeno due prodotti dello stesso tipo con il formato scritto nella descrizione (es. "500G", "1L").',
+      cheapest: "Il più conveniente",
+    },
+    frequency: {
+      title: "Acquisti frequenti",
+      description:
+        "Quante volte compri un prodotto e quanto lo paghi in media: in alto a destra quelli su cui conviene concentrarsi. La dimensione è la spesa totale.",
+      x: "Acquisti",
+      y: "Prezzo medio",
+      z: "Spesa totale",
+      none: "Nessun prodotto comprato più di una volta nel periodo.",
+    },
+    categoryDrill: {
+      hint: "Scegli una categoria per vedere i prodotti che la compongono.",
+      back: "Tutte le categorie",
+      productsOf: (category: string) => `Prodotti in ${category}`,
+      none: "Nessuna riga prodotto in questa categoria.",
+    },
   },
   states: {
     errorTitle: "Qualcosa è andato storto",

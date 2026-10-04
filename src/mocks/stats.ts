@@ -99,3 +99,60 @@ export function summarizeMockStats(owner: string, query: StatsQuery): Stats {
     bySource: rows(bySource, "source").sort((a, b) => byText(a.source, b.source)),
   };
 }
+
+/** Massimo di scontrini e di righe di `/v1/stats/dataset`, come `DATASET_LIMIT` del backend. */
+export const DATASET_LIMIT = 5000;
+
+/** Come `stats.service.dataset` del backend: scontrini e righe del periodo, dal più recente. */
+export function mockStatsDataset(
+  owner: string,
+  query: Omit<StatsQuery, "granularity">,
+): Schemas["StatsDataset"] {
+  const entries = ownerReceipts(owner)
+    .map((entry) => {
+      advance(entry);
+      return entry;
+    })
+    .filter(({ receipt, extraction }) => receipt.status === "extracted" && extraction)
+    .map((entry) => ({
+      entry,
+      when: Date.parse(entry.extraction!.purchasedAt ?? entry.receipt.createdAt),
+    }))
+    .filter(
+      ({ when }) =>
+        (query.from === undefined || when >= query.from) &&
+        (query.to === undefined || when < query.to),
+    )
+    .sort((a, b) => b.when - a.when || byText(a.entry.receipt.id, b.entry.receipt.id));
+  const asCategory = (value: string | null | undefined): Schemas["Category"] =>
+    (categories as readonly string[]).includes(value ?? "")
+      ? (value as Schemas["Category"])
+      : "altro";
+  const receipts = entries.map(({ entry, when }) => ({
+    id: entry.receipt.id,
+    date: new Date(when).toISOString(),
+    merchantName: entry.extraction!.merchantName,
+    total: entry.extraction!.total,
+    category: asCategory(entry.extraction!.category),
+    source: entry.receipt.source,
+  }));
+  const items = entries.flatMap(({ entry }) =>
+    [...entry.extraction!.items]
+      .sort((a, b) => a.position - b.position)
+      .map((item) => ({
+        receiptId: entry.receipt.id,
+        description: item.description,
+        quantity: item.quantity,
+        unitPrice: item.unitPrice,
+        amount: item.amount,
+        category: asCategory(item.category ?? entry.extraction!.category),
+      })),
+  );
+  return {
+    from: query.from === undefined ? null : new Date(query.from).toISOString(),
+    to: query.to === undefined ? null : new Date(query.to).toISOString(),
+    truncated: receipts.length >= DATASET_LIMIT || items.length >= DATASET_LIMIT,
+    receipts: receipts.slice(0, DATASET_LIMIT),
+    items: items.slice(0, DATASET_LIMIT),
+  };
+}

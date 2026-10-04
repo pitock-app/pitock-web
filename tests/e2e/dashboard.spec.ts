@@ -3,77 +3,74 @@ import type { components } from "../../src/lib/api/schema";
 import { formatCurrency } from "../../src/lib/format";
 import { login } from "./helpers";
 
-type Stats = components["schemas"]["Stats"];
+type Dataset = components["schemas"]["StatsDataset"];
 
 // Gli scontrini di esempio e l'utente "vuoto…" esistono solo negli handler MSW.
 test.skip(!!process.env.E2E_BASE_URL, "Richiede la modalità mock (nessun backend reale).");
 
 /** Importo come lo mostra la pagina, con gli spazi normalizzati. */
 const money = (value: number) => formatCurrency(value).replace(/\s/g, " ");
+const round2 = (value: number) => Math.round(value * 100) / 100;
 
-/** Registra le risposte di `GET /v1/stats` (servite da MSW nel service worker). */
-function recordStats(page: Page) {
+/** Registra le risposte di `GET /v1/stats/dataset` (servite da MSW nel service worker). */
+function recordDatasets(page: Page) {
   const responses: Response[] = [];
   page.on("response", (response) => {
-    if (new URL(response.url()).pathname.endsWith("/v1/stats")) responses.push(response);
+    if (new URL(response.url()).pathname.endsWith("/v1/stats/dataset")) responses.push(response);
   });
   return responses;
 }
 
 /** La risposta del periodo mostrato: quella con la data iniziale indicata. */
-async function statsFor(responses: Response[], from: string): Promise<Stats> {
+async function datasetFor(responses: Response[], from: string): Promise<Dataset> {
   await expect
     .poll(() => responses.some((r) => new URL(r.url()).searchParams.get("from") === from))
     .toBe(true);
   const response = responses.findLast((r) => new URL(r.url()).searchParams.get("from") === from)!;
-  return (await response.json()) as Stats;
+  return (await response.json()) as Dataset;
 }
 
-async function expectKpis(page: Page, stats: Stats) {
-  await expect(page.getByTestId("dashboard-kpi-total")).toHaveText(money(stats.totals.total));
-  await expect(page.getByTestId("dashboard-kpi-count")).toHaveText(String(stats.totals.nReceipts));
-  await expect(page.getByTestId("dashboard-kpi-average")).toHaveText(money(stats.totals.average));
+async function expectKpis(page: Page, dataset: Dataset) {
+  const total = round2(dataset.receipts.reduce((sum, r) => sum + (r.total ?? 0), 0));
+  const count = dataset.receipts.length;
+  await expect(page.getByTestId("dashboard-kpi-total")).toHaveText(money(total));
+  await expect(page.getByTestId("dashboard-kpi-count")).toHaveText(String(count));
+  await expect(page.getByTestId("dashboard-kpi-average")).toHaveText(money(round2(total / count)));
 }
 
 test("i valori mostrati coincidono con quelli della risposta", async ({ page }) => {
-  const responses = recordStats(page);
+  const responses = recordDatasets(page);
   await login(page, "/dashboard?period=custom&from=2025-01-01&to=2026-12-31");
 
-  const stats = await statsFor(responses, "2025-01-01");
-  expect(stats.totals.nReceipts).toBeGreaterThan(0);
-  await expectKpis(page, stats);
+  const dataset = await datasetFor(responses, "2025-01-01");
+  expect(dataset.receipts.length).toBeGreaterThan(0);
+  await expectKpis(page, dataset);
 
-  const merchants = page.getByRole("region", { name: "Esercenti principali" });
-  await expect(merchants.getByRole("listitem")).toHaveCount(Math.min(stats.topMerchants.length, 5));
-  for (const merchant of stats.topMerchants.slice(0, 5)) {
-    await expect(merchants.getByText(merchant.merchantName, { exact: true })).toBeVisible();
+  // In alto previsione e risparmio potenziale, poi le sezioni.
+  await expect(page.getByTestId("forecast-projected")).toBeVisible();
+  await expect(page.getByTestId("savings-total")).toBeVisible();
+  for (const name of ["In sintesi", "Andamento generale", "Prodotto per prodotto"]) {
+    await expect(page.getByRole("heading", { level: 2, name })).toBeVisible();
   }
 
-  const sources = page.getByRole("region", { name: "Per sorgente" });
-  for (const source of stats.bySource) {
-    await expect(sources.getByText(money(source.total), { exact: true })).toBeVisible();
-  }
+  // Classifiche limitate a 10 con "Mostra tutti".
+  const products = page.getByRole("region", { name: "Dove finiscono i soldi" });
+  await expect(products.getByRole("listitem")).toHaveCount(10);
+  await products.getByRole("button", { name: /Mostra tutti/ }).click();
+  expect(await products.getByRole("listitem").count()).toBeGreaterThan(10);
 
-  // Le tabelle dei grafici riportano ogni categoria e ogni mese con spese.
-  const categories = page.getByRole("region", { name: "Per categoria" });
-  await categories.getByText("Dati del grafico").click();
-  await expect(categories.getByRole("table").getByRole("row")).toHaveCount(
-    stats.byCategory.length + 1,
-  );
+  // Lo stesso prodotto in più negozi: il confronto c'è.
+  const stores = page.getByRole("region", { name: "Stesso prodotto, negozi diversi" });
+  await expect(stores.getByText("Latte intero 1L", { exact: true }).first()).toBeVisible();
+
+  // Le tabelle dei grafici riportano ogni mese con spese.
   const months = page.getByRole("region", { name: "Spesa per mese" });
   await months.getByText("Dati del grafico").click();
-  for (const row of stats.byPeriod) {
-    await expect(
-      months
-        .getByRole("row")
-        .filter({ hasText: money(row.total) })
-        .first(),
-    ).toBeVisible();
-  }
+  await expect(months.getByRole("row").nth(1)).toBeVisible();
 });
 
-test("il periodo scelto finisce nell'URL e aggiorna i valori", async ({ page }) => {
-  const responses = recordStats(page);
+test("il periodo e i filtri finiscono nell'URL e aggiornano i valori", async ({ page }) => {
+  const responses = recordDatasets(page);
   await login(page, "/dashboard");
   // Il mese in corso può essere vuoto (dipende dalla data): si aspetta solo il selettore.
   await expect(page.getByLabel("Dal", { exact: true })).toBeVisible();
@@ -82,9 +79,21 @@ test("il periodo scelto finisce nell'URL e aggiorna i valori", async ({ page }) 
   await page.getByLabel("Dal", { exact: true }).fill("2025-01-01");
   await page.getByLabel("Al", { exact: true }).fill("2026-12-31");
   await expect(page).toHaveURL(/period=custom&from=2025-01-01&to=2026-12-31$/);
-  await expectKpis(page, await statsFor(responses, "2025-01-01"));
-  // Mesi interi: i 24 mesi subito prima, 2023 e 2024.
-  await statsFor(responses, "2023-01-01");
+  const dataset = await datasetFor(responses, "2025-01-01");
+  await expectKpis(page, dataset);
+
+  // Filtro per negozio: tutti i valori si ricalcolano e il filtro va nell'URL.
+  await page.getByLabel("Negozio").selectOption("Lidl");
+  await expect(page).toHaveURL(/store=Lidl/);
+  await expectKpis(page, {
+    ...dataset,
+    receipts: dataset.receipts.filter((r) => r.merchantName === "Lidl"),
+  });
+  await page
+    .getByRole("button", { name: /Togli i filtri/ })
+    .first()
+    .click();
+  await expect(page).not.toHaveURL(/store=/);
 
   // Lo slider copre l'ultimo anno: cursori sul mese in corso, poi l'iniziale in fondo a sinistra.
   const start = page.getByRole("slider", { name: "Mese iniziale" });

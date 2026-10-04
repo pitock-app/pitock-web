@@ -2,11 +2,8 @@ import { describe, expect, it } from "vitest";
 import {
   granularityOf,
   parseDashboardFilters,
-  percentChange,
   periodKeys,
-  previousRange,
   serializeDashboardFilters,
-  toStatsQuery,
 } from "@/features/dashboard/lib/dashboard-period";
 import {
   currentRange,
@@ -33,44 +30,23 @@ describe("periodo della dashboard", () => {
     expect(serializeDashboardFilters({ period: "this-month" }).toString()).toBe("");
   });
 
-  it("confronta ogni periodo con quello precedente", () => {
-    expect(previousRange({ period: "this-month" }, now)).toEqual({
-      from: "2026-09-01",
-      to: "2026-09-04",
-    });
-    expect(previousRange({ period: "last-month" }, now)).toEqual({
-      from: "2026-08-01",
-      to: "2026-08-31",
-    });
-    expect(previousRange({ period: "last-12-months" }, now)).toEqual({
-      from: "2024-11-01",
-      to: "2025-10-31",
-    });
-    expect(previousRange({ period: "this-year" }, now)).toEqual({
-      from: "2025-01-01",
-      to: "2025-10-04",
-    });
-    expect(previousRange({ period: "custom", from: "2026-03-10", to: "2026-03-19" }, now)).toEqual({
-      from: "2026-02-28",
-      to: "2026-03-09",
-    });
-    expect(previousRange({ period: "custom", from: "2026-03-10" }, now)).toBeNull();
-    // Mesi interi: lo stesso numero di mesi interi subito prima.
-    expect(previousRange({ period: "custom", from: "2026-03-01", to: "2026-05-31" }, now)).toEqual({
-      from: "2025-12-01",
-      to: "2026-02-28",
-    });
-    // Fine mese: il 31 marzo si confronta con il 1–28 febbraio.
-    expect(previousRange({ period: "this-month" }, new Date("2026-03-31T10:00:00Z"))).toEqual({
-      from: "2026-02-01",
-      to: "2026-02-28",
+  it("legge e scrive negozio e categoria, scartando le categorie non valide", () => {
+    const parsed = parseDashboardFilters(
+      new URLSearchParams("period=last-month&store=Lidl&category=alimentari"),
+    );
+    expect(parsed).toEqual({ period: "last-month", store: "Lidl", category: "alimentari" });
+    expect(serializeDashboardFilters(parsed).toString()).toBe(
+      "period=last-month&store=Lidl&category=alimentari",
+    );
+    expect(parseDashboardFilters(new URLSearchParams("category=gioielli&store=%20"))).toEqual({
+      period: "this-month",
     });
   });
 
   it("sceglie mesi o anni e riempie le barre vuote", () => {
     const range = currentRange({ period: "last-12-months" }, now);
     expect(range).toEqual({ from: "2025-11-01", to: "2026-10-31" });
-    expect(toStatsQuery(range)).toEqual({ ...range, granularity: "month" });
+    expect(granularityOf(range)).toBe("month");
     const keys = periodKeys(range, "month")!;
     expect(keys).toHaveLength(12);
     expect(keys[0]).toBe("2025-11");
@@ -85,9 +61,7 @@ describe("periodo della dashboard", () => {
     expect(periodKeys({ from: "2026-01-01" }, "month")).toBeNull();
   });
 
-  it("calcola e formatta la variazione", () => {
-    expect(percentChange(150, 100)).toBe(50);
-    expect(percentChange(50, 0)).toBeNull();
+  it("formatta la variazione", () => {
     expect(formatPercentChange(12.345)).toBe("+12,3%");
     expect(formatPercentChange(-25)).toBe("-25%");
     expect(formatPercentChange(0)).toBe("0%");

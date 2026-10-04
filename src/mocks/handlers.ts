@@ -36,7 +36,7 @@ import {
   verifyMockApiKey,
   type Provider,
 } from "./settings";
-import { parseStatsQuery, summarizeMockStats } from "./stats";
+import { mockStatsDataset, parseStatsQuery, summarizeMockStats } from "./stats";
 import {
   listMockUsageCalls,
   parseCallsQuery,
@@ -419,6 +419,16 @@ export const handlers = [
     const query = parseStatsQuery(new URL(request.url).searchParams);
     if (!query) return validationError("Intervallo di date non valido");
     return HttpResponse.json<Schemas["Stats"]>(summarizeMockStats(email, query));
+  }),
+
+  http.get(`${API}/stats/dataset`, ({ request }) => {
+    const email = authenticatedEmail(request);
+    if (!email) return unauthorized();
+    const params = new URL(request.url).searchParams;
+    params.delete("granularity");
+    const query = parseStatsQuery(params);
+    if (!query) return validationError("Intervallo di date non valido");
+    return HttpResponse.json<Schemas["StatsDataset"]>(mockStatsDataset(email, query));
   }),
 
   http.get(`${API}/usage/calls`, ({ request }) => {

@@ -1869,6 +1869,92 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/stats/dataset": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Scontrini e righe prodotto del periodo, per le analisi per prodotto */
+        get: {
+            parameters: {
+                query?: {
+                    /** @description Data dello scontrino (acquisto o, se manca, caricamento) da cui partire. Default: nessun limite */
+                    from?: string;
+                    /** @description Incluso; con la sola data comprende l'intera giornata. Default: nessun limite */
+                    to?: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Scontrini e righe del periodo */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["StatsDataset"];
+                    };
+                };
+                /** @description Richiesta non valida */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Token mancante o non valido */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Troppe richieste */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Errore interno */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Servizio temporaneamente non disponibile */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -2272,6 +2358,42 @@ export interface components {
             nReceipts: number;
             /** @description Totale medio per scontrino, 2 decimali */
             average: number;
+        };
+        /** @description Scontrini e righe prodotto del periodo (estrazioni correnti degli scontrini estratti), dal più recente */
+        StatsDataset: {
+            /** Format: date-time */
+            from: string | null;
+            /**
+             * Format: date-time
+             * @description Limite superiore esclusivo, già normalizzato come in /v1/stats
+             */
+            to: string | null;
+            /** @description Vero se uno dei due elenchi supera il limite ed è stato tagliato ai più recenti */
+            truncated: boolean;
+            receipts: components["schemas"]["StatsReceiptFact"][];
+            items: components["schemas"]["StatsItemFact"][];
+        };
+        StatsReceiptFact: {
+            /** Format: uuid */
+            id: string;
+            /**
+             * Format: date-time
+             * @description Data d'acquisto o, se manca, di caricamento
+             */
+            date: string;
+            merchantName: string | null;
+            total: number | null;
+            category: components["schemas"]["Category"];
+            source: components["schemas"]["ReceiptSource"];
+        };
+        StatsItemFact: {
+            /** Format: uuid */
+            receiptId: string;
+            description: string;
+            quantity: number | null;
+            unitPrice: number | null;
+            amount: number | null;
+            category: components["schemas"]["Category"] & unknown;
         };
     };
     responses: never;
