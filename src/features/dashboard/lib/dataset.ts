@@ -79,6 +79,7 @@ export function summarize(
   const byPeriod = new Map<string, Amounts>();
   const byMerchant = new Map<string, Amounts>();
   const bySource = new Map<Schemas["ReceiptSource"], Amounts>();
+  const withoutMerchant = { total: 0, nReceipts: 0 };
   for (const receipt of receipts) {
     const amount = amounts.get(receipt.id) ?? 0;
     total += amount;
@@ -87,6 +88,10 @@ export function summarize(
     add(byPeriod, granularity === "year" ? day.slice(0, 4) : day.slice(0, 7), amount);
     const merchant = receipt.merchantName?.trim();
     if (merchant) add(byMerchant, merchant, amount);
+    else {
+      withoutMerchant.total += amount;
+      withoutMerchant.nReceipts += 1;
+    }
     add(bySource, receipt.source, amount);
   }
   const n = receipts.length;
@@ -102,6 +107,11 @@ export function summarize(
     topMerchants: rows(byMerchant)
       .map(({ key, ...rest }) => ({ merchantName: key, ...rest }))
       .sort((a, b) => b.total - a.total || a.merchantName.localeCompare(b.merchantName)),
+    /** Scontrini senza esercente: con `topMerchants` la somma torna al totale. */
+    withoutMerchant:
+      withoutMerchant.nReceipts > 0
+        ? { total: round2(withoutMerchant.total), nReceipts: withoutMerchant.nReceipts }
+        : null,
     bySource: rows(bySource)
       .map(({ key, ...rest }) => ({ source: key, ...rest }))
       .sort((a, b) => b.total - a.total),

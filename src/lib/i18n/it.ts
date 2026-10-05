@@ -659,6 +659,7 @@ export const it = {
     periodColumn: { month: "Mese", year: "Anno" },
     topMerchantsTitle: "Esercenti principali",
     topMerchantsDescription: "Gli esercenti dove hai speso di più.",
+    withoutMerchant: "Senza negozio",
     merchant: "Esercente",
     bySourceTitle: "Per sorgente",
     bySourceDescription: "Come sono stati inseriti gli scontrini.",

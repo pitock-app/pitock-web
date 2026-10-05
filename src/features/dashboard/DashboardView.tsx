@@ -309,6 +309,7 @@ export function DashboardView() {
             />
             <TopMerchants
               rows={summary.topMerchants}
+              withoutMerchant={summary.withoutMerchant}
               total={summary.totals.total}
               colorOf={colorOf}
             />

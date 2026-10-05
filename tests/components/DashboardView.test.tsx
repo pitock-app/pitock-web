@@ -169,6 +169,7 @@ describe("DashboardView", () => {
 
     const merchants = screen.getByRole("region", { name: "Esercenti principali" });
     expect(within(merchants).getAllByRole("listitem")).toHaveLength(3);
+    expect(within(merchants).queryByText("Senza negozio")).not.toBeInTheDocument();
     const sources = screen.getByRole("region", { name: "Per sorgente" });
     expect(within(sources).getByText(money(60))).toBeInTheDocument();
     const bars = screen.getByRole("region", { name: "Spesa per mese" });

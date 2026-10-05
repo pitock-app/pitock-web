@@ -190,6 +190,18 @@ describe("filtri del dataset", () => {
     expect(summary.totals).toEqual({ total: 40, nReceipts: 2, average: 20 });
     expect(summary.byPeriod).toEqual([{ period: "2026-10", total: 40, nReceipts: 2 }]);
   });
+
+  it("gli scontrini senza negozio formano una voce a parte che chiude il totale", () => {
+    const all = [...receipts, receipt("c", "2026-10-03T09:00:00Z", null, 7.5)];
+    const amounts = receiptAmounts(all, [], undefined);
+    const summary = summarize(all, amounts, "month");
+    expect(summary.withoutMerchant).toEqual({ total: 7.5, nReceipts: 1 });
+    const stores = summary.topMerchants.reduce((sum, row) => sum + row.total, 0);
+    expect(stores + (summary.withoutMerchant?.total ?? 0)).toBe(summary.totals.total);
+    expect(
+      summarize(receipts, receiptAmounts(receipts, [], undefined), "month").withoutMerchant,
+    ).toBeNull();
+  });
 });
 
 describe("prodotti normalizzati dal modello", () => {
