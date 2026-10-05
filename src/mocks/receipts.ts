@@ -5,6 +5,7 @@ import {
   paymentMethods,
   receiptSources,
   receiptStatuses,
+  sizeUnits,
 } from "@/lib/api/enums";
 import type { components } from "@/lib/api/schema";
 import { decodeCursor, encodeCursor } from "./cursor";
@@ -160,7 +161,11 @@ function isItem(value: unknown): value is NonNullable<Schemas["ExtractionPatch"]
     optional(item.unitPrice, (v) => inRange(v, -MAX_AMOUNT, MAX_AMOUNT)) &&
     optional(item.amount, (v) => inRange(v, -MAX_AMOUNT, MAX_AMOUNT)) &&
     optional(item.vatRate, (v) => inRange(v, 0, 100)) &&
-    (item.category === undefined || includes(categories, item.category))
+    (item.category === undefined || includes(categories, item.category)) &&
+    optional(item.normalizedName, (v) => isNullableText(v, 200)) &&
+    optional(item.brand, (v) => isNullableText(v, 100)) &&
+    optional(item.size, (v) => v === null || (typeof v === "number" && v > 0)) &&
+    optional(item.sizeUnit, (v) => v === null || includes(sizeUnits, v))
   );
 }
 
@@ -174,9 +179,15 @@ export function parseExtractionPatch(body: Record<string, unknown> | null): Extr
   for (const [key, value] of Object.entries(body)) {
     switch (key) {
       case "merchantName":
+      case "merchantBrand":
       case "merchantAddress":
       case "merchantVat": {
-        const max = key === "merchantName" ? 200 : key === "merchantVat" ? 32 : 500;
+        const max = {
+          merchantName: 200,
+          merchantBrand: 100,
+          merchantVat: 32,
+          merchantAddress: 500,
+        }[key];
         if (!isNullableText(value, max)) return null;
         patch[key] = typeof value === "string" ? value.trim() : null;
         break;

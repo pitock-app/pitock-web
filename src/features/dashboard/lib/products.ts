@@ -11,9 +11,14 @@ export type PriceUnit = "pz" | "kg" | "l";
 
 /** Un acquisto di un prodotto: una riga di scontrino ripulita e con il prezzo unitario. */
 export type Purchase = {
-  /** Chiave del prodotto: descrizione normalizzata. */
+  /**
+   * Chiave del prodotto: nome normalizzato dal modello con marca e formato, oppure (righe
+   * vecchie o manuali) la descrizione ripulita.
+   */
   key: string;
   label: string;
+  /** Tipo di prodotto, per confrontare formati e marche ("latte intero"). */
+  typeKey: string | null;
   receiptId: string;
   /** Giorno di Roma (YYYY-MM-DD). */
   day: string;
@@ -27,8 +32,11 @@ export type Purchase = {
   unitPrice: number;
   unit: "pz" | "kg";
   /** Prezzo al kg o al litro ricavato dal formato scritto nella descrizione; null se manca. */
-  measuredPrice: { value: number; unit: "kg" | "l" } | null;
+  measuredPrice: { value: number; unit: MeasureUnit } | null;
 };
+
+/** Unità del prezzo confrontabile tra formati: al kg, al litro o al pezzo della confezione. */
+export type MeasureUnit = "kg" | "l" | "pz";
 
 // ---- normalizzazione delle descrizioni ----
 
@@ -129,7 +137,8 @@ export function toPurchases(receipts: ReceiptFact[], items: ItemFact[]): Purchas
   for (const item of items) {
     const receipt = byId.get(item.receiptId);
     if (!receipt || NOT_A_PRODUCT.test(item.description)) continue;
-    const key = productKey(item.description);
+    const normalized = normalizedProduct(item);
+    const key = normalized?.key ?? productKey(item.description);
     if (!key) continue;
     const quantity = item.quantity && item.quantity > 0 ? item.quantity : 1;
     const amount = item.amount ?? (item.unitPrice !== null ? item.unitPrice * quantity : null);
@@ -149,10 +158,14 @@ export function toPurchases(receipts: ReceiptFact[], items: ItemFact[]): Purchas
     }
     if (!(unitPrice > 0)) continue;
 
-    const size = unit === "kg" ? { value: 1, unit: "kg" as const } : packSize(item.description);
+    const size =
+      unit === "kg"
+        ? { value: 1, unit: "kg" as const }
+        : (normalized?.size ?? packSize(item.description));
     purchases.push({
       key,
-      label: productLabel(item.description),
+      label: normalized?.label ?? productLabel(item.description),
+      typeKey: normalized?.typeKey ?? productType(key),
       receiptId: receipt.id,
       day: toRomeDateInput(new Date(receipt.date)),
       merchant: receipt.merchantName?.trim() || null,
@@ -165,6 +178,59 @@ export function toPurchases(receipts: ReceiptFact[], items: ItemFact[]): Purchas
     });
   }
   return purchases;
+}
+
+const UNIT_LABEL: Record<NonNullable<ItemFact["sizeUnit"]>, string> = {
+  g: "g",
+  kg: "kg",
+  ml: "ml",
+  cl: "cl",
+  l: "L",
+  pz: "pz",
+};
+
+/** Formato letto dal modello in kg, litri o pezzi. */
+function sizeOf(size: number | null, unit: ItemFact["sizeUnit"]) {
+  if (!size || size <= 0 || !unit) return null;
+  switch (unit) {
+    case "g":
+      return { value: size / 1000, unit: "kg" as const };
+    case "kg":
+      return { value: size, unit: "kg" as const };
+    case "ml":
+      return { value: size / 1000, unit: "l" as const };
+    case "cl":
+      return { value: size / 100, unit: "l" as const };
+    case "l":
+      return { value: size, unit: "l" as const };
+    case "pz":
+      return { value: size, unit: "pz" as const };
+  }
+}
+
+/**
+ * Prodotto normalizzato dal modello: stesso nome, marca e formato → stesso prodotto, anche se
+ * negozi diversi lo stampano in modo diverso. Null per le righe senza nome normalizzato.
+ */
+function normalizedProduct(item: ItemFact) {
+  const name = item.normalizedName?.trim();
+  if (!name) return null;
+  const typeKey = productKey(name);
+  if (!typeKey) return null;
+  const brand = item.brand?.trim() || null;
+  const sizeText =
+    item.size && item.sizeUnit
+      ? `${String(item.size).replace(".", ",")} ${UNIT_LABEL[item.sizeUnit]}`
+      : null;
+  const label = [name.charAt(0).toUpperCase() + name.slice(1), brand, sizeText]
+    .filter(Boolean)
+    .join(" · ");
+  return {
+    key: [typeKey, brand ? productKey(brand) : "", sizeText ? productKey(sizeText) : ""].join("|"),
+    label,
+    typeKey,
+    size: sizeOf(item.size, item.sizeUnit),
+  };
 }
 
 // ---- statistiche per prodotto ----
@@ -202,8 +268,10 @@ export type ProductStats = {
   firstDay: string;
   lastDay: string;
   priceChange: number | null;
-  /** Prezzo al kg o al litro medio, se il formato è nella descrizione. */
-  measuredPrice: { value: number; unit: "kg" | "l" } | null;
+  /** Tipo di prodotto, per il confronto tra formati e marche. */
+  typeKey: string | null;
+  /** Prezzo al kg, al litro o al pezzo medio, se il formato è noto. */
+  measuredPrice: { value: number; unit: MeasureUnit } | null;
 };
 
 const average = (purchases: Purchase[]) => {
@@ -240,6 +308,7 @@ export function productStats(purchases: Purchase[]): ProductStats[] {
     result.push({
       key,
       label: all[all.length - 1].label,
+      typeKey: all[all.length - 1].typeKey,
       category: all[all.length - 1].category,
       unit,
       purchases: all.length,
@@ -343,7 +412,7 @@ export function productType(key: string): string | null {
 export function formatComparison(products: ProductStats[]) {
   const groups = new Map<string, ProductStats[]>();
   for (const product of products) {
-    const type = productType(product.key);
+    const type = product.typeKey;
     if (!type || !product.measuredPrice) continue;
     const id = `${type}:${product.measuredPrice.unit}`;
     groups.set(id, [...(groups.get(id) ?? []), product]);
@@ -409,7 +478,7 @@ export type SavingTip =
       type: string;
       cheaper: string;
       pricier: string;
-      unit: "kg" | "l";
+      unit: MeasureUnit;
       gap: number;
       impact: number;
     }

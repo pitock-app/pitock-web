@@ -24,6 +24,7 @@ const receipt = (
   id,
   date,
   merchantName,
+  merchantOriginal: merchantName,
   total,
   category: "alimentari",
   source: "camera",
@@ -36,7 +37,18 @@ const item = (
   quantity: number | null = 1,
   amount: number | null = unitPrice !== null && quantity !== null ? unitPrice * quantity : null,
   category: ItemFact["category"] = "alimentari",
-): ItemFact => ({ receiptId, description, quantity, unitPrice, amount, category });
+): ItemFact => ({
+  receiptId,
+  description,
+  quantity,
+  unitPrice,
+  amount,
+  category,
+  normalizedName: null,
+  brand: null,
+  size: null,
+  sizeUnit: null,
+});
 
 describe("normalizzazione dei prodotti", () => {
   it("toglie peso, prezzo al kg e quantità ripetuti dalla descrizione", () => {
@@ -177,5 +189,64 @@ describe("filtri del dataset", () => {
     const summary = summarize(casa.receipts, amounts, "month");
     expect(summary.totals).toEqual({ total: 40, nReceipts: 2, average: 20 });
     expect(summary.byPeriod).toEqual([{ period: "2026-10", total: 40, nReceipts: 2 }]);
+  });
+});
+
+describe("prodotti normalizzati dal modello", () => {
+  const norm = (
+    receiptId: string,
+    description: string,
+    unitPrice: number,
+    normalizedName: string,
+    brand: string | null,
+    size: number | null,
+    sizeUnit: ItemFact["sizeUnit"],
+  ): ItemFact => ({
+    ...item(receiptId, description, unitPrice),
+    normalizedName,
+    brand,
+    size,
+    sizeUnit,
+  });
+  const receipts = [
+    receipt("a", "2026-09-01T09:00:00Z", "Lidl"),
+    receipt("b", "2026-09-02T09:00:00Z", "Esselunga"),
+  ];
+  const items = [
+    // Stesso latte, scritto in due modi diversi.
+    norm("a", "LATTE PS UHT GRAN 1L", 1.29, "Latte parzialmente scremato UHT", "Granarolo", 1, "l"),
+    norm(
+      "b",
+      "GRANAROLO LATTE P.S. 1000ML",
+      1.59,
+      "latte parzialmente scremato UHT",
+      "Granarolo",
+      1,
+      "l",
+    ),
+    // Stesso tipo, altra marca e formato: confronto al litro.
+    norm("b", "PARMALAT PS 500ML", 0.99, "Latte parzialmente scremato UHT", "Parmalat", 500, "ml"),
+    // Riga vecchia senza nome normalizzato: resta com'era.
+    item("a", "PASTA PENNE 500G", 0.95),
+  ];
+  const products = productStats(toPurchases(receipts, items));
+
+  it("riconosce lo stesso prodotto in negozi diversi anche con descrizioni diverse", () => {
+    const milk = products.find(
+      (p) => p.label === "Latte parzialmente scremato UHT · Granarolo · 1 L",
+    );
+    expect(milk?.merchants.map((m) => m.merchant)).toEqual(["Lidl", "Esselunga"]);
+    expect(storeComparison(products)).toHaveLength(1);
+    expect(products.some((p) => p.key === "pasta penne 500g")).toBe(true);
+  });
+
+  it("confronta marche e formati dello stesso tipo sul prezzo al litro", () => {
+    const [group] = formatComparison(products);
+    expect(group.type).toBe("latte parzialmente scremato uht");
+    expect(group.unit).toBe("l");
+    expect(group.products.map((p) => [p.label, p.measuredPrice?.value])).toEqual([
+      ["Latte parzialmente scremato UHT · Granarolo · 1 L", 1.44],
+      ["Latte parzialmente scremato UHT · Parmalat · 500 ml", 1.98],
+    ]);
   });
 });

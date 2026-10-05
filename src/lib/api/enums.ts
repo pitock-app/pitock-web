@@ -48,3 +48,6 @@ export const aiProvidersExact: Exact<(typeof aiProviders)[number], Schemas["Prov
 
 export const aiModes = ["platform", "byok"] as const;
 export const aiModesExact: Exact<(typeof aiModes)[number], Schemas["AiMode"]> = true;
+
+export const sizeUnits = ["g", "kg", "ml", "cl", "l", "pz"] as const;
+export const sizeUnitsExact: Exact<(typeof sizeUnits)[number], Schemas["SizeUnit"]> = true;

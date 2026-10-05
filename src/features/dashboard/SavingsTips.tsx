@@ -18,7 +18,7 @@ function tipText(tip: SavingTip): string {
         type,
         tip.cheaper,
         formatGap(tip.gap),
-        tip.unit === "kg" ? "kg" : "litro",
+        tip.unit === "kg" ? "kg" : tip.unit === "l" ? "litro" : "pezzo",
         tip.pricier,
       );
       // "Caffe: Caffe macinato 500g…" → "Caffe macinato 500g…" quando il prodotto ripete già il tipo.

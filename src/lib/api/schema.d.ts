@@ -2082,6 +2082,8 @@ export interface components {
             keySource: "platform" | "user" | null;
             promptVersion: string | null;
             merchantName: string | null;
+            /** @description Insegna del negozio ("Lidl", "IN's"), distinta dalla ragione sociale */
+            merchantBrand: string | null;
             merchantVat: string | null;
             merchantAddress: string | null;
             /** Format: date-time */
@@ -2113,9 +2115,18 @@ export interface components {
             amount: number | null;
             vatRate: number | null;
             category: components["schemas"]["Category"] | null;
+            /** @description Nome del prodotto senza marca né formato ("Latte intero"), per confrontare gli acquisti */
+            normalizedName: string | null;
+            brand: string | null;
+            /** @description Formato della confezione, in `sizeUnit` */
+            size: number | null;
+            sizeUnit: components["schemas"]["SizeUnit"] | null;
         };
+        /** @enum {string} */
+        SizeUnit: "g" | "kg" | "ml" | "cl" | "l" | "pz";
         ManualReceiptInput: {
             merchantName: string;
+            merchantBrand?: string;
             merchantVat?: string;
             /** @example 2026-10-04T12:30:00+02:00 */
             purchasedAt: string;
@@ -2133,6 +2144,11 @@ export interface components {
                 amount?: number;
                 vatRate?: number;
                 category?: components["schemas"]["Category"];
+                /** @description Nome del prodotto senza marca né formato; il client lo rimanda invariato */
+                normalizedName?: string | null;
+                brand?: string | null;
+                size?: number | null;
+                sizeUnit?: components["schemas"]["SizeUnit"] | null;
             }[];
         };
         ReceiptList: {
@@ -2160,6 +2176,7 @@ export interface components {
         };
         ExtractionPatch: {
             merchantName?: string | null;
+            merchantBrand?: string | null;
             merchantVat?: string | null;
             merchantAddress?: string | null;
             /** @example 2026-10-04T12:30:00+02:00 */
@@ -2178,6 +2195,11 @@ export interface components {
                 amount?: number;
                 vatRate?: number;
                 category?: components["schemas"]["Category"];
+                /** @description Nome del prodotto senza marca né formato; il client lo rimanda invariato */
+                normalizedName?: string | null;
+                brand?: string | null;
+                size?: number | null;
+                sizeUnit?: components["schemas"]["SizeUnit"] | null;
             }[];
         };
         ReextractInput: {
@@ -2381,7 +2403,10 @@ export interface components {
              * @description Data d'acquisto o, se manca, di caricamento
              */
             date: string;
+            /** @description Nome armonizzato del negozio: insegna o nome, unito alle altre scritture dello stesso negozio */
             merchantName: string | null;
+            /** @description Nome come letto dallo scontrino */
+            merchantOriginal: string | null;
             total: number | null;
             category: components["schemas"]["Category"];
             source: components["schemas"]["ReceiptSource"];
@@ -2394,6 +2419,10 @@ export interface components {
             unitPrice: number | null;
             amount: number | null;
             category: components["schemas"]["Category"] & unknown;
+            normalizedName: string | null;
+            brand: string | null;
+            size: number | null;
+            sizeUnit: ("g" | "kg" | "ml" | "cl" | "l" | "pz") | null;
         };
     };
     responses: never;

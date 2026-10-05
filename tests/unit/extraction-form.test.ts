@@ -15,6 +15,7 @@ const extraction: Extraction = {
   keySource: "platform",
   promptVersion: "v1",
   merchantName: "Eni Station",
+  merchantBrand: null,
   merchantVat: "IT01234567890",
   merchantAddress: "Via Roma 1",
   purchasedAt: "2026-10-01T06:15:00.000Z",
@@ -38,6 +39,10 @@ const extraction: Extraction = {
       amount: 54.9,
       vatRate: 22,
       category: "carburante",
+      normalizedName: null,
+      brand: null,
+      size: null,
+      sizeUnit: null,
     },
   ],
 };
@@ -95,5 +100,31 @@ describe("form di correzione dell'estrazione", () => {
     expect(result.success).toBe(false);
     const paths = result.error?.issues.map((issue) => issue.path.join("."));
     expect(paths).toEqual(expect.arrayContaining(["category", "paymentMethod", "total"]));
+  });
+});
+
+describe("prodotto normalizzato nelle righe corrette", () => {
+  const withProduct: Extraction = {
+    ...extraction,
+    items: [
+      {
+        ...extraction.items[0],
+        normalizedName: "Gasolio",
+        brand: null,
+        size: null,
+        sizeUnit: null,
+      },
+    ],
+  };
+
+  it("lo rimanda invariato se la descrizione non cambia e lo toglie se cambia", () => {
+    const values = extractionToFormValues(withProduct);
+    const same = toExtractionPatch(extractionFormSchema.parse(values));
+    expect(same.items?.[0]).toMatchObject({ description: "Gasolio", normalizedName: "Gasolio" });
+
+    values.items[0].description = "Benzina";
+    const changed = toExtractionPatch(extractionFormSchema.parse(values));
+    expect(changed.items?.[0]).toMatchObject({ description: "Benzina" });
+    expect(changed.items?.[0]).not.toHaveProperty("normalizedName");
   });
 });

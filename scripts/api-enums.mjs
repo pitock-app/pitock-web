@@ -10,6 +10,7 @@ const ENUMS = {
   receiptStatuses: "ReceiptStatus",
   aiProviders: "Provider",
   aiModes: "AiMode",
+  sizeUnits: "SizeUnit",
   // Enum dentro una proprietà: [schema, proprietà].
 };
 

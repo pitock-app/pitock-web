@@ -14,6 +14,10 @@ const item = (id: string, description: string, amount: number) => ({
   amount,
   vatRate: null,
   category: null,
+  normalizedName: null,
+  brand: null,
+  size: null,
+  sizeUnit: null,
 });
 
 const extraction: Extraction = {
@@ -25,6 +29,7 @@ const extraction: Extraction = {
   keySource: "platform",
   promptVersion: "v2",
   merchantName: "Lidl",
+  merchantBrand: null,
   merchantVat: null,
   merchantAddress: null,
   purchasedAt: "2026-10-01T06:15:00.000Z",

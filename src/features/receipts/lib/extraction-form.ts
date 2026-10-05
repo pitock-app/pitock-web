@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { manualEntrySchema, manualItemSchema } from "@/features/manual-entry";
-import { categories } from "@/lib/api/enums";
+import { categories, sizeUnits } from "@/lib/api/enums";
 import type { components } from "@/lib/api/schema";
 import { formatAmountInput, toRomeLocalInput } from "@/lib/format";
 
@@ -8,13 +8,29 @@ type Schemas = components["schemas"];
 export type Extraction = Schemas["ExtractionDetail"];
 export type ExtractionPatch = Schemas["ExtractionPatch"];
 
+/** Prodotto normalizzato dal modello, con la descrizione a cui si riferisce. */
+const productSchema = z.object({
+  description: z.string(),
+  normalizedName: z.string().nullable(),
+  brand: z.string().nullable(),
+  size: z.number().nullable(),
+  sizeUnit: z.enum(sizeUnits).nullable(),
+});
+
 /**
  * Form di correzione: gli stessi campi e la stessa validazione dell'inserimento manuale.
- * Le righe conservano la loro categoria (non modificabile dal form) per non perderla
- * quando `items` sostituisce tutte le righe.
+ * Le righe conservano categoria e prodotto normalizzato (non modificabili dal form) per non
+ * perderli quando `items` sostituisce tutte le righe.
  */
 export const extractionFormSchema = manualEntrySchema.extend({
-  items: z.array(manualItemSchema.extend({ category: z.enum(categories).optional() })).max(500),
+  items: z
+    .array(
+      manualItemSchema.extend({
+        category: z.enum(categories).optional(),
+        product: productSchema.optional(),
+      }),
+    )
+    .max(500),
 });
 
 export type ExtractionFormValues = z.input<typeof extractionFormSchema>;
@@ -49,6 +65,17 @@ export function extractionToFormValues(extraction: Extraction): ExtractionFormVa
       amount: amountInput(item.amount),
       vatRate: numberInput(item.vatRate),
       ...(item.category ? { category: item.category } : {}),
+      ...(item.normalizedName || item.brand || item.size
+        ? {
+            product: {
+              description: item.description,
+              normalizedName: item.normalizedName,
+              brand: item.brand,
+              size: item.size,
+              sizeUnit: item.sizeUnit,
+            },
+          }
+        : {}),
     })),
   };
 }
@@ -72,6 +99,17 @@ export function toExtractionPatch(values: ExtractionFormOutput): ExtractionPatch
     merchantVat: values.merchantVat ?? null,
     taxTotal: values.taxTotal ?? null,
     notes: values.notes ?? null,
-    items: values.items.map((item) => withoutUndefined(item)),
+    items: values.items.map(({ product, ...item }) => ({
+      ...withoutUndefined(item),
+      // Se la descrizione è cambiata, il prodotto normalizzato non vale più.
+      ...(product && product.description.trim() === item.description.trim()
+        ? {
+            normalizedName: product.normalizedName,
+            brand: product.brand,
+            size: product.size,
+            sizeUnit: product.sizeUnit,
+          }
+        : {}),
+    })),
   };
 }

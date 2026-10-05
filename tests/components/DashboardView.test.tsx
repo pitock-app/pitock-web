@@ -53,7 +53,7 @@ const receipt = (
   total: number,
   category: Dataset["receipts"][number]["category"],
   source: Dataset["receipts"][number]["source"] = "camera",
-) => ({ id, date, merchantName, total, category, source });
+) => ({ id, date, merchantName, merchantOriginal: merchantName, total, category, source });
 
 const line = (
   receiptId: string,
@@ -61,7 +61,18 @@ const line = (
   unitPrice: number,
   quantity = 1,
   category: Dataset["items"][number]["category"] = "alimentari",
-) => ({ receiptId, description, quantity, unitPrice, amount: unitPrice * quantity, category });
+) => ({
+  receiptId,
+  description,
+  quantity,
+  unitPrice,
+  amount: unitPrice * quantity,
+  category,
+  normalizedName: null,
+  brand: null,
+  size: null,
+  sizeUnit: null,
+});
 
 /** Settembre 2026: latte in due negozi a prezzi diversi, benzina senza righe. */
 const dataset: Dataset = {

@@ -131,7 +131,9 @@ export function mockStatsDataset(
   const receipts = entries.map(({ entry, when }) => ({
     id: entry.receipt.id,
     date: new Date(when).toISOString(),
-    merchantName: entry.extraction!.merchantName,
+    // Il backend armonizza i nomi (insegna, chiave normalizzata, P.IVA): qui insegna o nome.
+    merchantName: entry.extraction!.merchantBrand ?? entry.extraction!.merchantName,
+    merchantOriginal: entry.extraction!.merchantName,
     total: entry.extraction!.total,
     category: asCategory(entry.extraction!.category),
     source: entry.receipt.source,
@@ -146,6 +148,10 @@ export function mockStatsDataset(
         unitPrice: item.unitPrice,
         amount: item.amount,
         category: asCategory(item.category ?? entry.extraction!.category),
+        normalizedName: item.normalizedName,
+        brand: item.brand,
+        size: item.size,
+        sizeUnit: item.sizeUnit,
       })),
   );
   return {

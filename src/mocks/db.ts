@@ -231,8 +231,9 @@ function fakeExtraction(
     provider: plan.provider,
     model: plan.model,
     keySource: plan.keySource,
-    promptVersion: "v1",
+    promptVersion: "v3",
     merchantName: sample.name,
+    merchantBrand: sample.name,
     merchantVat: null,
     merchantAddress: null,
     purchasedAt: entry.receipt.capturedAt ?? entry.receipt.createdAt,
@@ -398,6 +399,10 @@ function toItems(items: Schemas["ManualReceiptInput"]["items"]): Schemas["Receip
     amount: roundTo(item.amount, 2),
     vatRate: roundTo(item.vatRate, 2),
     category: item.category ?? null,
+    normalizedName: item.normalizedName?.trim() || null,
+    brand: item.brand?.trim() || null,
+    size: item.size ?? null,
+    sizeUnit: item.size ? (item.sizeUnit ?? null) : null,
   }));
 }
 
@@ -419,6 +424,7 @@ export function createManualReceipt(
     keySource: null,
     promptVersion: null,
     merchantName: input.merchantName,
+    merchantBrand: input.merchantBrand?.trim() || null,
     merchantVat: input.merchantVat ?? null,
     merchantAddress: null,
     purchasedAt: new Date(input.purchasedAt).toISOString(),
