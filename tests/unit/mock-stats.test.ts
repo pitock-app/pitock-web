@@ -123,16 +123,9 @@ describe("handler MSW del dataset", () => {
     expect(sum(dataset.receipts.map((r) => r.total ?? 0))).toBe(summary.totals.total);
     const dates = dataset.receipts.map((r) => r.date);
     expect([...dates].sort().reverse()).toEqual(dates);
-    // La spesa di esempio al supermercato ha le righe, con lo stesso prodotto in più negozi.
     const ids = new Set(dataset.receipts.map((r) => r.id));
     expect(dataset.items.length).toBeGreaterThan(0);
     expect(dataset.items.every((item) => ids.has(item.receiptId))).toBe(true);
-    const milkStores = new Set(
-      dataset.items
-        .filter((item) => item.description === "LATTE INTERO 1L")
-        .map((item) => dataset.receipts.find((r) => r.id === item.receiptId)?.merchantName),
-    );
-    expect(milkStores.size).toBeGreaterThan(1);
   });
 
   it("rifiuta un intervallo al contrario", async () => {

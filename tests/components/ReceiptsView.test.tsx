@@ -4,7 +4,6 @@ import { http, HttpResponse } from "msw";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ReceiptsView } from "@/features/receipts";
 import { createMockAuthProvider } from "@/lib/auth/mock-auth";
-import { seededReceiptCount } from "@/mocks";
 import { server, setupMswServer } from "../helpers/msw-server";
 import { renderWithQuery } from "../helpers/render";
 
@@ -50,12 +49,8 @@ describe("ReceiptsView", () => {
       "href",
       expect.stringMatching(/^\/receipts\/[0-9a-f-]{36}$/),
     );
-    // Si carica una pagina alla volta finché il pulsante sparisce.
-    const expected = seededReceiptCount("anna@pitock.test");
-    for (let page = 2; page <= Math.ceil(expected / 20); page += 1) {
-      await user.click(screen.getByRole("button", { name: "Carica altri" }));
-      await waitFor(() => expect(rows()).toHaveLength(Math.min(page * 20, expected)));
-    }
+    await user.click(screen.getByRole("button", { name: "Carica altri" }));
+    await waitFor(() => expect(rows()).toHaveLength(30));
     expect(screen.queryByRole("button", { name: "Carica altri" })).not.toBeInTheDocument();
   });
 

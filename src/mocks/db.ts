@@ -1,6 +1,5 @@
 import type { components } from "@/lib/api/schema";
 import { MOCK_USER_ID } from "@/lib/auth/mock-session";
-import { groceryReceipts } from "./groceries";
 import { forgetMockFile, mockFileUrl, resetMockFiles } from "@/lib/storage/mock-files";
 import {
   forgetMockSettings,
@@ -463,11 +462,6 @@ export function createManualReceipt(
 export const SEED_COUNT = 30;
 const DAY_MS = 86_400_000;
 
-/** Scontrini di esempio di un utente: i 30 di base più la spesa al supermercato degli ultimi mesi. */
-export function seededReceiptCount(owner: string, now = Date.now()) {
-  return wantsSeed(owner) ? SEED_COUNT + groceryReceipts(owner, now).length : 0;
-}
-
 /** Le email che iniziano con "vuoto" non hanno scontrini di esempio (per provare lo stato vuoto). */
 function wantsSeed(owner: string) {
   return !/^vuoto/i.test(owner);
@@ -480,10 +474,6 @@ function ensureSeeded(owner: string, now = Date.now()) {
   // Dal più vecchio al più recente, distribuiti su circa 13 mesi.
   for (let index = SEED_COUNT - 1; index >= 0; index -= 1) {
     seedReceipt(owner, index, now);
-  }
-  // Spesa al supermercato con le righe: alimenta i grafici per prodotto della dashboard.
-  for (const { input, createdAt } of groceryReceipts(owner, now)) {
-    createManualReceipt(owner, input, createdAt);
   }
 }
 

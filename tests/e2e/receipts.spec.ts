@@ -102,14 +102,9 @@ test("i filtri stanno nell'URL e sopravvivono al ricaricamento", async ({ page }
 test("carica altri scontrini con il cursore", async ({ page }) => {
   await login(page, "/receipts");
   await expect(receiptItems(page)).toHaveCount(20);
-  // Una pagina da 20 alla volta finché il pulsante sparisce (gli esempi sono più di 2 pagine).
-  const more = page.getByRole("button", { name: "Carica altri" });
-  for (let pages = 2; await more.isVisible(); pages += 1) {
-    await more.click();
-    await expect.poll(() => receiptItems(page).count()).toBeGreaterThan((pages - 1) * 20);
-  }
-  expect(await receiptItems(page).count()).toBeGreaterThan(30);
-  await expect(more).toHaveCount(0);
+  await page.getByRole("button", { name: "Carica altri" }).click();
+  await expect(receiptItems(page)).toHaveCount(30);
+  await expect(page.getByRole("button", { name: "Carica altri" })).toHaveCount(0);
   // Lo scontrino in elaborazione si aggiorna da solo.
   await expect(receiptItems(page).first()).toHaveAttribute("data-status", "extracted", {
     timeout: 15_000,

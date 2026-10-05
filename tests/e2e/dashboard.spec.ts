@@ -48,20 +48,15 @@ test("i valori mostrati coincidono con quelli della risposta", async ({ page }) 
 
   // In alto previsione e risparmio potenziale, poi le sezioni.
   await expect(page.getByTestId("forecast-projected")).toBeVisible();
-  await expect(page.getByTestId("savings-total")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Risparmio potenziale" })).toBeVisible();
   for (const name of ["In sintesi", "Andamento generale", "Prodotto per prodotto"]) {
     await expect(page.getByRole("heading", { level: 2, name })).toBeVisible();
   }
 
-  // Classifiche limitate a 10 con "Mostra tutti".
+  // Gli scontrini di esempio hanno solo righe generiche ("Articolo 1"): niente prodotti da
+  // confrontare, e i grafici per prodotto lo dicono invece di inventare dati.
   const products = page.getByRole("region", { name: "Dove finiscono i soldi" });
-  await expect(products.getByRole("listitem")).toHaveCount(10);
-  await products.getByRole("button", { name: /Mostra tutti/ }).click();
-  expect(await products.getByRole("listitem").count()).toBeGreaterThan(10);
-
-  // Lo stesso prodotto in più negozi: il confronto c'è.
-  const stores = page.getByRole("region", { name: "Stesso prodotto, negozi diversi" });
-  await expect(stores.getByText("Latte intero 1L", { exact: true }).first()).toBeVisible();
+  await expect(products.getByText(/Nessuna riga prodotto nel periodo/)).toBeVisible();
 
   // Le tabelle dei grafici riportano ogni mese con spese.
   const months = page.getByRole("region", { name: "Spesa per mese" });
@@ -83,11 +78,11 @@ test("il periodo e i filtri finiscono nell'URL e aggiornano i valori", async ({ 
   await expectKpis(page, dataset);
 
   // Filtro per negozio: tutti i valori si ricalcolano e il filtro va nell'URL.
-  await page.getByLabel("Negozio").selectOption("Lidl");
-  await expect(page).toHaveURL(/store=Lidl/);
+  await page.getByLabel("Negozio").selectOption("Esselunga");
+  await expect(page).toHaveURL(/store=Esselunga/);
   await expectKpis(page, {
     ...dataset,
-    receipts: dataset.receipts.filter((r) => r.merchantName === "Lidl"),
+    receipts: dataset.receipts.filter((r) => r.merchantName === "Esselunga"),
   });
   await page
     .getByRole("button", { name: /Togli i filtri/ })

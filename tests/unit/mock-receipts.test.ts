@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { createMockAccessToken } from "@/lib/auth/mock-session";
 import type { components } from "@/lib/api/schema";
-import { mockTiming, seededReceiptCount } from "@/mocks";
+import { mockTiming } from "@/mocks";
 import { setupMswServer } from "../helpers/msw-server";
 
 type Schemas = components["schemas"];
@@ -37,18 +37,11 @@ describe("handler MSW degli scontrini", () => {
     const first = await list();
     expect(first.items).toHaveLength(20);
     expect(first.nextCursor).toBeTruthy();
-    const all = [...first.items];
-    let cursor = first.nextCursor;
-    while (cursor) {
-      const page = await list(`?cursor=${encodeURIComponent(cursor)}`);
-      expect(page.items.length).toBeGreaterThan(0);
-      expect(page.items.length).toBeLessThanOrEqual(20);
-      all.push(...page.items);
-      cursor = page.nextCursor;
-    }
-    const expected = seededReceiptCount("sync@pitock.test");
-    expect(expected).toBeGreaterThan(30);
-    expect(new Set(all.map((item) => item.id)).size).toBe(expected);
+    const second = await list(`?cursor=${encodeURIComponent(first.nextCursor!)}`);
+    expect(second.items).toHaveLength(10);
+    expect(second.nextCursor).toBeNull();
+    const all = [...first.items, ...second.items];
+    expect(new Set(all.map((item) => item.id)).size).toBe(30);
     const dates = all.map((item) => item.createdAt);
     expect([...dates].sort().reverse()).toEqual(dates);
   });
