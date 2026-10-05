@@ -24,7 +24,10 @@ export type FailedStep = "upload" | "extraction" | "timeout";
 export type QueueResult = Pick<
   Schemas["ExtractionDetail"],
   "merchantName" | "purchasedAt" | "total" | "currency" | "category" | "confidence"
->;
+> & {
+  /** Somma degli importi delle righe lette; null se non ce ne sono. */
+  itemsSum?: number | null;
+};
 
 export type QueueItem = {
   id: string;

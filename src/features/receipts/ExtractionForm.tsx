@@ -3,12 +3,13 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { AlertTriangle, Calculator, Save } from "lucide-react";
 import { useEffect, useState } from "react";
-import { FormProvider, useForm } from "react-hook-form";
+import { FormProvider, useForm, useWatch } from "react-hook-form";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { ItemsFieldArray, ReceiptFields, totalFromItems } from "@/features/manual-entry";
 import { apiErrorMessage, isApiError } from "@/lib/api/errors";
-import { formatAmountInput } from "@/lib/format";
+import { itemsTotalMismatch } from "@/lib/extraction";
+import { formatAmountInput, formatCurrency, parseItalianNumber } from "@/lib/format";
 import { it } from "@/lib/i18n/it";
 import { useUpdateExtraction } from "./hooks/useReceipt";
 import {
@@ -36,7 +37,13 @@ export function ExtractionForm({ extraction, autoFocus }: ExtractionFormProps) {
     resolver: zodResolver(extractionFormSchema),
     defaultValues: extractionToFormValues(extraction),
   });
-  const { handleSubmit, getValues, setValue, reset, setFocus, formState } = form;
+  const { handleSubmit, getValues, setValue, reset, setFocus, formState, control } = form;
+  // Si aggiorna mentre l'utente corregge righe e totale.
+  const [items, totalText] = useWatch({ control, name: ["items", "total"] });
+  const mismatch = itemsTotalMismatch(
+    parseItalianNumber(totalText ?? ""),
+    totalFromItems(items ?? []),
+  );
 
   useEffect(() => {
     if (autoFocus) setFocus("merchantName");
@@ -77,6 +84,20 @@ export function ExtractionForm({ extraction, autoFocus }: ExtractionFormProps) {
         <ReceiptFields idPrefix="extraction" />
         <ItemsFieldArray idPrefix="extraction" />
 
+        {mismatch && (
+          <p
+            role="status"
+            className="flex items-start gap-2 rounded-lg border border-amber-600/40 bg-amber-50 p-3 text-sm text-amber-900 dark:bg-amber-950/40 dark:text-amber-100"
+            data-testid="items-total-mismatch"
+          >
+            <AlertTriangle className="mt-0.5 size-4 shrink-0" aria-hidden />
+            {t.itemsTotalMismatch(
+              formatCurrency(mismatch.sum),
+              formatCurrency(mismatch.total),
+              formatCurrency(Math.abs(mismatch.difference)),
+            )}
+          </p>
+        )}
         <div className="flex flex-col gap-3 border-t pt-4 sm:flex-row sm:items-center sm:justify-between">
           <Button type="button" variant="outline" className="h-11" onClick={computeTotal}>
             <Calculator aria-hidden />

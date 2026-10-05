@@ -1,14 +1,15 @@
-import { isLowConfidence } from "@/lib/extraction";
+import { isLowConfidence, itemsTotalMismatch } from "@/lib/extraction";
 import type { QueueItem, QueueResult } from "../store/upload-queue.store";
 
 /** Problema che rende da controllare un'estrazione riuscita. */
-export type ReviewIssue = "lowConfidence" | "merchantName" | "total" | "purchasedAt";
+export type ReviewIssue = "lowConfidence" | "itemsTotal" | "merchantName" | "total" | "purchasedAt";
 
-/** Problemi dell'estrazione: confidenza bassa o campi principali non letti. */
+/** Problemi dell'estrazione: confidenza bassa, righe che non tornano col totale, campi non letti. */
 export function reviewIssues(result: QueueResult | undefined): ReviewIssue[] {
   if (!result) return [];
   const issues: ReviewIssue[] = [];
   if (isLowConfidence(result.confidence)) issues.push("lowConfidence");
+  if (itemsTotalMismatch(result.total, result.itemsSum)) issues.push("itemsTotal");
   if (!result.merchantName) issues.push("merchantName");
   if (result.total === null) issues.push("total");
   if (!result.purchasedAt) issues.push("purchasedAt");

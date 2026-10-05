@@ -1,6 +1,16 @@
 "use client";
 
-import { Camera, Check, ImageUp, RefreshCw, RotateCw, VideoOff } from "lucide-react";
+import {
+  Camera,
+  Check,
+  ImageUp,
+  Layers,
+  Plus,
+  RefreshCw,
+  RotateCw,
+  VideoOff,
+  X,
+} from "lucide-react";
 import {
   type ChangeEvent,
   useCallback,
@@ -14,7 +24,7 @@ import { Button } from "@/components/ui/button";
 import { it } from "@/lib/i18n/it";
 import { isPdf } from "./lib/file-types";
 import { validateFiles } from "./lib/validate-files";
-import { captureVideoFrame, photoFileName, rotateImage90 } from "./lib/image-tools";
+import { captureVideoFrame, photoFileName, rotateImage90, stitchVertical } from "./lib/image-tools";
 import { useUploadQueue } from "./store/upload-queue.store";
 
 const t = it.capture.camera;
@@ -51,6 +61,9 @@ export function CameraCapture() {
   const add = useUploadQueue((state) => state.add);
   const [photo, setPhoto] = useState<Photo | null>(null);
   const [rotating, setRotating] = useState(false);
+  // Pezzi già scattati di uno scontrino lungo, dall'alto in basso.
+  const [pieces, setPieces] = useState<Photo[]>([]);
+  const [stitching, setStitching] = useState(false);
   const [webcam, setWebcam] = useState<WebcamState>("idle");
   const streamRef = useRef<MediaStream | null>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
@@ -73,6 +86,11 @@ export function CameraCapture() {
 
   useEffect(() => () => streamRef.current?.getTracks().forEach((track) => track.stop()), []);
   useEffect(() => () => (photo ? URL.revokeObjectURL(photo.url) : undefined), [photo]);
+  const piecesRef = useRef(pieces);
+  useEffect(() => {
+    piecesRef.current = pieces;
+  }, [pieces]);
+  useEffect(() => () => piecesRef.current.forEach((piece) => URL.revokeObjectURL(piece.url)), []);
 
   // Collega lo stream al <video> ogni volta che l'elemento viene montato.
   const videoRef = useCallback(
@@ -146,12 +164,84 @@ export function CameraCapture() {
     }
   }
 
-  function confirmPhoto() {
+  function discardPieces() {
+    pieces.forEach((piece) => URL.revokeObjectURL(piece.url));
+    setPieces([]);
+  }
+
+  /** Il pezzo in anteprima entra tra quelli dello scontrino; si torna a scattare. */
+  function addPiece() {
     if (!photo) return;
-    add([{ file: photo.file, source: "camera", capturedAt: photo.capturedAt }]);
-    toast.success(t.added);
+    setPieces((current) => [...current, { ...photo, url: URL.createObjectURL(photo.file) }]);
     setPhoto(null);
   }
+
+  /** Mette in coda la foto, oppure l'unione dei pezzi (più quello in anteprima). */
+  async function confirm() {
+    const all = [...pieces, ...(photo ? [photo] : [])];
+    if (all.length === 0) return;
+    let file = all[0].file;
+    if (all.length > 1) {
+      setStitching(true);
+      try {
+        const blob = await stitchVertical(all.map((piece) => piece.file));
+        file = new File([blob], photoFileName(new Date()), { type: "image/jpeg" });
+      } catch {
+        toast.error(t.stitchFailed);
+        return;
+      } finally {
+        setStitching(false);
+      }
+    }
+    add([{ file, source: "camera", capturedAt: all[0].capturedAt }]);
+    toast.success(t.added);
+    setPhoto(null);
+    discardPieces();
+  }
+
+  const piecesStrip = pieces.length > 0 && (
+    <section
+      aria-label={t.pieces(pieces.length)}
+      className="bg-muted/50 flex w-full max-w-2xl flex-col gap-3 rounded-xl border p-3 text-left"
+    >
+      <div className="flex items-center gap-2 text-sm font-medium">
+        <Layers className="size-4" aria-hidden />
+        {t.pieces(pieces.length)}
+      </div>
+      <ol className="flex gap-2 overflow-x-auto">
+        {pieces.map((piece, index) => (
+          <li key={piece.url} className="shrink-0">
+            {/* eslint-disable-next-line @next/next/no-img-element -- anteprima locale (blob:) */}
+            <img
+              src={piece.url}
+              alt={t.piece(index + 1)}
+              className="bg-background h-24 w-auto rounded-md border object-contain"
+            />
+          </li>
+        ))}
+      </ol>
+      {!photo && (
+        <>
+          <p className="text-muted-foreground text-sm">{t.piecesHint}</p>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              type="button"
+              className={`h-11 ${primaryClass}`}
+              onClick={() => void confirm()}
+              disabled={stitching}
+            >
+              <Check aria-hidden />
+              {stitching ? t.stitching : pieces.length === 1 ? t.use : t.useStitched(pieces.length)}
+            </Button>
+            <Button type="button" variant="outline" className="h-11" onClick={discardPieces}>
+              <X aria-hidden />
+              {t.discardPieces}
+            </Button>
+          </div>
+        </>
+      )}
+    </section>
+  );
 
   const fileFallback = (
     <>
@@ -185,6 +275,7 @@ export function CameraCapture() {
           alt={t.preview}
           className="bg-muted max-h-[60vh] w-auto max-w-full rounded-xl border object-contain"
         />
+        {piecesStrip}
         <div className="flex w-full flex-wrap justify-center gap-2">
           <Button
             type="button"
@@ -201,16 +292,27 @@ export function CameraCapture() {
             {t.retake}
           </Button>
           <Button
+            type="button"
+            variant="outline"
+            className="h-11"
+            onClick={addPiece}
+            disabled={rotating || stitching}
+          >
+            <Plus aria-hidden />
+            {t.addPiece}
+          </Button>
+          <Button
             ref={primaryRef}
             type="button"
             className={`h-11 px-5 ${primaryClass}`}
-            onClick={confirmPhoto}
-            disabled={rotating}
+            onClick={() => void confirm()}
+            disabled={rotating || stitching}
           >
             <Check aria-hidden />
-            {t.use}
+            {stitching ? t.stitching : pieces.length > 0 ? t.useStitched(pieces.length + 1) : t.use}
           </Button>
         </div>
+        <p className="text-muted-foreground max-w-md text-center text-xs">{t.addPieceHint}</p>
       </div>
     );
   }
@@ -218,6 +320,7 @@ export function CameraCapture() {
   if (isTouch) {
     return (
       <div className="flex flex-col items-center gap-4 py-6 text-center">
+        {piecesStrip}
         <input
           ref={cameraInputRef}
           type="file"
@@ -246,6 +349,7 @@ export function CameraCapture() {
 
   return (
     <div className="flex flex-col items-center gap-4 py-2 text-center">
+      {piecesStrip}
       {webcam === "live" ? (
         <>
           <video

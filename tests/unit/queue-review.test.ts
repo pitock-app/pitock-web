@@ -24,6 +24,13 @@ function queueItem(id: string, patch: Partial<QueueItem>): QueueItem {
 }
 
 describe("reviewIssues", () => {
+  it("segnala le righe che non tornano con il totale (tolleranza 5 centesimi)", () => {
+    expect(reviewIssues({ ...good, itemsSum: 12.53 })).toEqual([]);
+    expect(reviewIssues({ ...good, itemsSum: 9.9 })).toEqual(["itemsTotal"]);
+    // Senza righe con importo non c'è niente da confrontare.
+    expect(reviewIssues({ ...good, itemsSum: null })).toEqual([]);
+  });
+
   it("nessun problema per un'estrazione completa e affidabile", () => {
     expect(reviewIssues(good)).toEqual([]);
     expect(reviewIssues({ ...good, confidence: null })).toEqual([]);

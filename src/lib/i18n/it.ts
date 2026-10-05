@@ -379,6 +379,8 @@ export const it = {
       saving: "Salvataggio…",
       saved: "Modifiche salvate.",
       lowConfidence: "Confidenza bassa: controlla con attenzione i dati estratti.",
+      itemsTotalMismatch: (sum: string, total: string, difference: string) =>
+        `La somma delle righe (${sum}) non coincide con il totale (${total}): differenza di ${difference}. Controlla che non manchino righe o che non ce ne siano di ripetute, oppure usa "Calcola totale dalle righe".`,
       details: "Dettagli dell'estrazione",
       method: "Metodo",
       methods: { llm: "Lettura automatica", manual: "Inserimento manuale" },
@@ -458,6 +460,17 @@ export const it = {
       use: "Usa questa foto",
       added: "Foto aggiunta alla coda.",
       rotateFailed: "Non è stato possibile ruotare la foto.",
+      addPiece: "Aggiungi un pezzo",
+      addPieceHint:
+        "Scontrino lungo? Fotografalo a pezzi dall'alto in basso, lasciando un paio di righe in comune tra un pezzo e l'altro.",
+      pieces: (count: number) =>
+        count === 1 ? "1 pezzo dello scontrino" : `${count} pezzi dello scontrino`,
+      piecesHint: "Scatta il pezzo successivo, oppure unisci quelli che hai.",
+      piece: (index: number) => `Pezzo ${index}`,
+      useStitched: (count: number) => `Unisci ${count} pezzi e usa`,
+      discardPieces: "Annulla i pezzi",
+      stitchFailed: "Non è stato possibile unire le foto.",
+      stitching: "Unione delle foto…",
     },
     dropzone: {
       label: "Seleziona o trascina i file degli scontrini",
@@ -481,6 +494,7 @@ export const it = {
       attentionHint: "La foto non è stata letta bene: controlla e correggi i dati.",
       issues: {
         lowConfidence: "lettura poco affidabile",
+        itemsTotal: "le righe non tornano con il totale",
         merchantName: "esercente non letto",
         total: "totale non letto",
         purchasedAt: "data non letta",

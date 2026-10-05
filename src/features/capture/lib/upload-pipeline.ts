@@ -1,6 +1,7 @@
 import { isApiError } from "@/lib/api/errors";
 import type { components } from "@/lib/api/schema";
 import type { SignedUpload } from "@/lib/storage";
+import { itemsSum } from "@/lib/extraction";
 import type { QueueItem, QueueResult, UploadQueueStore } from "../store/upload-queue.store";
 import type { PreparedFile } from "./prepare-file";
 
@@ -72,6 +73,7 @@ function toResult(detail: Schemas["ReceiptDetail"]): QueueResult {
     currency: extraction?.currency ?? "EUR",
     category: extraction?.category ?? null,
     confidence: extraction?.confidence ?? null,
+    itemsSum: itemsSum(detail.items),
   };
 }
 
