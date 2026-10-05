@@ -149,9 +149,10 @@ describe("DashboardView", () => {
     expect(within(kpis).queryByText("Variazione")).not.toBeInTheDocument();
     expect(queries.map((query) => query.toString())).toContain("from=2026-09-01&to=2026-09-30");
 
-    // Previsione sul mese in corso (storico dalla seconda richiesta).
-    expect(await screen.findByTestId("forecast-spent")).toHaveTextContent(money(50));
-    expect(screen.getByTestId("forecast-indicative")).toHaveTextContent("Stima indicativa");
+    // Settembre è finito: solo la spesa reale del periodo, senza previsione.
+    expect(await screen.findByTestId("forecast-spent")).toHaveTextContent(money(125));
+    expect(screen.getByRole("heading", { name: "Spesa nel periodo" })).toBeInTheDocument();
+    expect(screen.queryByTestId("forecast-projected")).not.toBeInTheDocument();
 
     // Latte: (1,49 − 1,29) × 2 + (1,59 − 1,29) = 0,70 €.
     expect(screen.getByTestId("savings-total")).toHaveTextContent(money(0.7));
@@ -174,6 +175,16 @@ describe("DashboardView", () => {
     expect(within(sources).getByText(money(60))).toBeInTheDocument();
     const bars = screen.getByRole("region", { name: "Spesa per mese" });
     expect(within(bars).getByRole("rowheader", { name: "settembre 2026" })).toBeInTheDocument();
+  });
+
+  it("sul mese in corso mostra lo speso finora e la previsione a fine periodo", async () => {
+    nav.search = new URLSearchParams("period=this-month");
+    mockDataset({ current: dataset });
+    renderWithQuery(<DashboardView />);
+    expect(await screen.findByTestId("forecast-spent")).toHaveTextContent(money(50));
+    expect(screen.getByRole("heading", { name: "Previsione del periodo" })).toBeInTheDocument();
+    expect(screen.getByTestId("forecast-projected")).toBeInTheDocument();
+    expect(screen.getByTestId("forecast-indicative")).toHaveTextContent("Stima indicativa");
   });
 
   it("al clic su una categoria mostra i prodotti che la compongono", async () => {

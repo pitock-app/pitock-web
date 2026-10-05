@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { findRecurring, forecastMonth, type DailySpend } from "@/features/dashboard/lib/forecast";
+import {
+  findRecurring,
+  forecastMonth,
+  forecastRange,
+  type DailySpend,
+} from "@/features/dashboard/lib/forecast";
 
 const spend = (day: string, amount: number, merchant: string | null = "Supermercato") => ({
   day,
@@ -135,5 +140,78 @@ describe("previsione del mese", () => {
     );
     expect(f.spent).toBe(10);
     expect(f.historyMonths).toBe(0);
+  });
+});
+
+describe("previsione del periodo", () => {
+  const gym = (month: string, amount = 40) => spend(`${month}-08`, amount, "Palestra");
+  // Storico: luglio–settembre a 10 €/giorno, più la palestra (ricorrente) ogni mese.
+  const history = [
+    ...steadyMonth("2026-07", 31, 10),
+    ...steadyMonth("2026-08", 31, 10),
+    ...steadyMonth("2026-09", 30, 10),
+    gym("2026-07"),
+    gym("2026-08", 42),
+    gym("2026-09"),
+    spend("2026-10-01", 10),
+  ];
+  const today = "2026-10-05";
+  const inRange = (from: string, to: string) => history.filter((s) => s.day >= from && s.day <= to);
+
+  it("sul mese in corso coincide con la previsione del mese", () => {
+    const range = { from: "2026-10-01", to: "2026-10-31" };
+    const f = forecastRange(inRange(range.from, range.to), history, range, today);
+    const month = forecastMonth(history, today);
+    expect(f.hasProjection).toBe(true);
+    expect(f.spent).toBe(10);
+    expect(f.projected).toBeCloseTo(month.projected, 1);
+    expect(f.series).toHaveLength(31);
+    expect(f.series[4]).toEqual({ day: "2026-10-05", actual: 10, projected: 10 });
+    expect(f.series[5].actual).toBeNull();
+    expect(f.series.at(-1)?.projected).toBeCloseTo(f.projected, 1);
+    expect(f.month).not.toBeNull();
+    expect(f.futureMonths).toBe(0);
+    expect(f.previousMonthTotal).toBe(340);
+  });
+
+  it("sull'anno aggiunge i mesi futuri al ritmo dello storico, con le ricorrenti", () => {
+    const range = { from: "2026-01-01", to: "2026-12-31" };
+    const f = forecastRange(inRange(range.from, range.to), history, range, today);
+    const month = forecastMonth(history, today);
+    // Speso: luglio–settembre con la palestra, più il 1° ottobre.
+    expect(f.spent).toBe(310 + 40 + 310 + 42 + 300 + 40 + 10);
+    expect(f.futureMonths).toBe(2);
+    expect(f.futureDailyRate).toBe(10);
+    expect(f.recurring).toEqual([{ merchant: "Palestra", amount: 40 }]);
+    // Novembre (30 gg) e dicembre (31 gg) a 10 €/giorno, più 40 € di palestra ciascuno.
+    const future = 30 * 10 + 40 + 31 * 10 + 40;
+    expect(f.projected).toBeCloseTo(f.spent + (month.projected - month.spent) + future, 1);
+    expect(f.series).toHaveLength(365);
+    expect(f.averageTotal).toBeCloseTo(12 * (month.averageMonthTotal ?? 0), 1);
+    expect(f.previousMonthTotal).toBeNull();
+  });
+
+  it("su un periodo finito mostra solo la spesa reale", () => {
+    const range = { from: "2026-09-01", to: "2026-09-30" };
+    const f = forecastRange(inRange(range.from, range.to), history, range, today);
+    expect(f.hasProjection).toBe(false);
+    expect(f.spent).toBe(340);
+    expect(f.projected).toBe(340);
+    expect(f.reliability).toBeNull();
+    expect(f.month).toBeNull();
+    expect(f.series.every((row) => row.projected === null)).toBe(true);
+    expect(f.series.at(-1)?.actual).toBe(340);
+    expect(f.previousMonthTotal).toBe(352);
+  });
+
+  it("su un periodo futuro è tutta previsione, da zero", () => {
+    const range = { from: "2026-11-01", to: "2026-11-30" };
+    const f = forecastRange([], history, range, today);
+    expect(f.elapsedDays).toBe(0);
+    expect(f.spent).toBe(0);
+    expect(f.projected).toBeCloseTo(30 * 10 + 40, 1);
+    expect(f.series[0]).toEqual({ day: "2026-11-01", actual: null, projected: 11.33 });
+    expect(f.month).toBeNull();
+    expect(f.previousMonthTotal).toBeNull();
   });
 });

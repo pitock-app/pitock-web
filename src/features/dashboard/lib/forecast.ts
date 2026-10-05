@@ -1,4 +1,4 @@
-import { lastDay, shiftMonth, ymd } from "@/lib/period";
+import { addDays, daysBetween, lastDay, shiftMonth, ymd } from "@/lib/period";
 
 /** Una spesa: giorno del calendario di Roma (YYYY-MM-DD), importo ed esercente. */
 export type DailySpend = { day: string; amount: number; merchant: string | null };
@@ -27,6 +27,8 @@ export type MonthForecast = {
   currentWeight: number;
   /** Spese ricorrenti già note ma non ancora comparse questo mese: entrano nella previsione. */
   pendingRecurring: RecurringSpend[];
+  /** Tutte le spese ricorrenti riconosciute nello storico, dalla più alta. */
+  recurring: RecurringSpend[];
   /** Totale del mese scorso; null se lo storico non lo copre. */
   previousMonthTotal: number | null;
   /** Media dei totali dei mesi passati completi; null se non ce ne sono. */
@@ -213,6 +215,7 @@ export function forecastMonth(
     historyDailyRate: historyDailyRate === null ? null : round2(historyDailyRate),
     currentWeight,
     pendingRecurring,
+    recurring: [...recurring.values()].sort((a, b) => b.amount - a.amount),
     previousMonthTotal: history.includes(previousKey)
       ? round2(monthTotals.get(previousKey) ?? 0)
       : null,
@@ -220,6 +223,165 @@ export function forecastMonth(
     averageMonths: totals.length,
     historyMonths: history.length,
     reliability,
+    series,
+  };
+}
+
+export type RangeForecast = {
+  from: string;
+  to: string;
+  today: string;
+  /** Giorni del periodo e giorni già trascorsi (oggi compreso). */
+  days: number;
+  elapsedDays: number;
+  /** Speso nel periodo fino a oggi compreso. */
+  spent: number;
+  /** Spesa prevista a fine periodo; uguale a `spent` se il periodo è finito. */
+  projected: number;
+  /** Vero se il periodo finisce dopo oggi: c'è qualcosa da prevedere. */
+  hasProjection: boolean;
+  /** Previsione del mese in corso, se i suoi giorni rimasti cadono nel periodo. */
+  month: MonthForecast | null;
+  /** Ritmo giornaliero per i mesi dopo quello in corso (spese ricorrenti escluse). */
+  futureDailyRate: number | null;
+  /** Mesi interi o parziali dopo quello in corso, dentro il periodo. */
+  futureMonths: number;
+  /** Spese ricorrenti contate in ogni mese futuro del periodo. */
+  recurring: RecurringSpend[];
+  /** Media mensile dello storico riportata ai giorni del periodo; null senza storico completo. */
+  averageTotal: number | null;
+  /** Mesi completi su cui è calcolata la media. */
+  averageMonths: number;
+  /** Totale del mese precedente, solo se il periodo è un mese intero. */
+  previousMonthTotal: number | null;
+  historyMonths: number;
+  /** Null se il periodo è finito: non c'è nulla di stimato. */
+  reliability: ForecastReliability | null;
+  /** Una riga per giorno: speso cumulato (fino a oggi) e proiezione (da oggi a fine periodo). */
+  series: { day: string; actual: number | null; projected: number | null }[];
+};
+
+const isWholeMonth = (from: string, to: string) => {
+  const [year, month] = from.split("-").map(Number);
+  return from.slice(8) === "01" && to === ymd(year, month, lastDay(year, month));
+};
+
+/**
+ * Spesa del periodo `from`–`to`: reale fino a oggi, prevista da domani alla fine.
+ *
+ * - `spends` sono le spese del periodo (il reale); `history` quelle dello storico della
+ *   previsione (i mesi passati e quello in corso), con gli stessi filtri.
+ * - Resto del mese in corso: stesso calcolo di `forecastMonth` (ritmo del mese mescolato con lo
+ *   storico, più le ricorrenti non ancora arrivate, spalmate sui giorni che mancano).
+ * - Mesi successivi: ritmo giornaliero medio dello storico, più ogni spesa ricorrente una volta
+ *   al mese, spalmata sui giorni del mese.
+ */
+export function forecastRange(
+  spends: DailySpend[],
+  history: DailySpend[],
+  range: { from?: string; to?: string },
+  today: string,
+  historyMonths = FORECAST_HISTORY_MONTHS,
+): RangeForecast {
+  const firstSpend = spends.map((spend) => spend.day).sort()[0];
+  const to = range.to ?? today;
+  const from = range.from ?? (firstSpend && firstSpend < to ? firstSpend : to);
+  const days = daysBetween(from, to);
+  const lastActual = to < today ? to : today;
+  const elapsedDays = from > today ? 0 : daysBetween(from, lastActual);
+
+  const byDay = new Map<string, number>();
+  for (const spend of spends) {
+    if (spend.day < from || spend.day > lastActual) continue;
+    byDay.set(spend.day, (byDay.get(spend.day) ?? 0) + spend.amount);
+  }
+  const spent = sum([...byDay.values()]);
+
+  const month = forecastMonth(history, today, historyMonths);
+  const currentMonth = today.slice(0, 7);
+  const monthEnd = `${currentMonth}-${String(month.daysInMonth).padStart(2, "0")}`;
+  const remainingInMonth = month.daysInMonth - month.dayOfMonth;
+  const pendingTotal = sum(month.pendingRecurring.map((spend) => spend.amount));
+  const recurringTotal = sum(month.recurring.map((spend) => spend.amount));
+  // Senza storico resta solo il ritmo del mese in corso.
+  const futureDailyRate = month.historyDailyRate ?? month.currentDailyRate;
+
+  /** Spesa prevista in un giorno dopo oggi. */
+  const projectedOn = (day: string) => {
+    if (day <= monthEnd) {
+      return month.dailyRate + (remainingInMonth > 0 ? pendingTotal / remainingInMonth : 0);
+    }
+    const [y, m] = day.split("-").map(Number);
+    return (futureDailyRate ?? 0) + recurringTotal / lastDay(y, m);
+  };
+
+  const hasProjection = to > today;
+  const futureKeys = new Set<string>();
+  let usesMonth = false;
+  let running = 0;
+  let projectedRunning = 0;
+  const series = Array.from({ length: days }, (_, index) => {
+    const day = addDays(from, index);
+    if (day <= today) {
+      running += byDay.get(day) ?? 0;
+      projectedRunning = running;
+      return {
+        day,
+        actual: round2(running),
+        // L'ultimo giorno reale apre anche la linea della proiezione: resta continua.
+        projected: hasProjection && day === today ? round2(running) : null,
+      };
+    }
+    if (day > monthEnd) futureKeys.add(day.slice(0, 7));
+    else usesMonth = true;
+    projectedRunning += projectedOn(day);
+    return { day, actual: null, projected: round2(projectedRunning) };
+  });
+  const projected = hasProjection ? projectedRunning : spent;
+
+  // Media mensile riportata ai giorni del periodo, mese per mese.
+  let averageTotal: number | null = null;
+  if (month.averageMonthTotal !== null) {
+    averageTotal = 0;
+    for (let day = from; day <= to;) {
+      const [y, m] = day.split("-").map(Number);
+      const end = ymd(y, m, lastDay(y, m));
+      const until = end < to ? end : to;
+      averageTotal += (month.averageMonthTotal * daysBetween(day, until)) / lastDay(y, m);
+      day = addDays(until, 1);
+    }
+  }
+
+  // Mese precedente solo per un mese intero, già iniziato, e se lo storico lo copre.
+  let previousMonthTotal: number | null = null;
+  if (isWholeMonth(from, to) && from.slice(0, 7) <= currentMonth) {
+    const [y, m] = from.split("-").map(Number);
+    const previous = shiftMonth(y, m, -1);
+    const key = ymd(previous.year, previous.month, 1).slice(0, 7);
+    const covered = history.some((spend) => spend.day.slice(0, 7) <= key);
+    previousMonthTotal = covered
+      ? round2(sum(history.filter((s) => s.day.slice(0, 7) === key).map((s) => s.amount)))
+      : null;
+  }
+
+  return {
+    from,
+    to,
+    today,
+    days,
+    elapsedDays,
+    spent: round2(spent),
+    projected: round2(projected),
+    hasProjection,
+    month: usesMonth ? month : null,
+    futureDailyRate: futureKeys.size > 0 ? round2(futureDailyRate) : null,
+    futureMonths: futureKeys.size,
+    recurring: futureKeys.size > 0 ? month.recurring : [],
+    averageTotal: averageTotal === null ? null : round2(averageTotal),
+    averageMonths: month.averageMonths,
+    previousMonthTotal,
+    historyMonths: month.historyMonths,
+    reliability: hasProjection ? month.reliability : null,
     series,
   };
 }

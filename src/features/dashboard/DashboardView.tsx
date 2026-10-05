@@ -39,7 +39,7 @@ import {
   type Dataset,
   type DatasetFilters,
 } from "./lib/dataset";
-import { FORECAST_HISTORY_MONTHS, forecastMonth } from "./lib/forecast";
+import { FORECAST_HISTORY_MONTHS, forecastRange } from "./lib/forecast";
 import { productStats, toPurchases } from "./lib/products";
 import { PeriodBars } from "./PeriodBars";
 import { PeriodPicker } from "./PeriodPicker";
@@ -115,11 +115,12 @@ export function DashboardView() {
   const searchParams = useSearchParams();
   const filters = useMemo(() => parseDashboardFilters(searchParams), [searchParams]);
   // Le date si calcolano al cambio di periodo, non a ogni render.
-  const { query, keys, granularity, today, historyQuery } = useMemo(() => {
+  const { range, query, keys, granularity, today, historyQuery } = useMemo(() => {
     const range = currentRange(filters);
     const day = toRomeDateInput();
     const granularityValue = granularityOf(range);
     return {
+      range,
       query: isRangeInvalid(filters)
         ? null
         : { ...(range.from ? { from: range.from } : {}), ...(range.to ? { to: range.to } : {}) },
@@ -158,9 +159,18 @@ export function DashboardView() {
     };
   }, [dataset.data, dimensions, granularity]);
 
+  // Spesa reale del periodo scelto e previsione fino alla sua fine, dallo storico.
   const forecast = useMemo(
-    () => (history.data ? forecastMonth(toSpends(history.data, dimensions), today) : null),
-    [history.data, dimensions, today],
+    () =>
+      dataset.data && history.data
+        ? forecastRange(
+            toSpends(dataset.data, dimensions),
+            toSpends(history.data, dimensions),
+            range,
+            today,
+          )
+        : null,
+    [dataset.data, history.data, dimensions, range, today],
   );
 
   // Colori dei negozi dai dati senza filtri: il colore segue il negozio in tutti i grafici.

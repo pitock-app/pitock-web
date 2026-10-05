@@ -12,21 +12,38 @@ import {
   YAxis,
 } from "recharts";
 import { Badge } from "@/components/ui/badge";
-import { formatCompactCurrency, formatCurrency, formatPercentChange } from "@/lib/format";
+import {
+  formatCompactCurrency,
+  formatCurrency,
+  formatDayRange,
+  formatPercentChange,
+  formatShortDay,
+} from "@/lib/format";
 import { it } from "@/lib/i18n/it";
 import { cn } from "@/lib/utils";
 import { axisTick, tooltipStyle } from "./ChartCard";
 import { INCREASE, SAVING } from "./lib/colors";
-import type { MonthForecast } from "./lib/forecast";
+import type { RangeForecast } from "./lib/forecast";
 
 const t = it.dashboard.forecast;
 
-function reliabilityNote(forecast: MonthForecast): string | null {
-  if (forecast.reliability === "good") return null;
+function reliabilityNote(forecast: RangeForecast): string | null {
+  if (forecast.reliability === null || forecast.reliability === "good") return null;
   if (forecast.historyMonths === 0) return t.reasonNoHistory;
-  if (forecast.dayOfMonth < 10) return t.reasonEarly(forecast.historyMonths);
+  if (Number(forecast.today.slice(8)) < 10) return t.reasonEarly(forecast.historyMonths);
   return t.reasonShortHistory(forecast.historyMonths);
 }
+
+/** Avanzamento del periodo: "Giorno 5 di 31", oppure le date se è finito o non è iniziato. */
+function progress(forecast: RangeForecast): string {
+  const range = formatDayRange(forecast.from, forecast.to);
+  if (forecast.elapsedDays === 0) return t.notStarted(range);
+  if (!forecast.hasProjection) return range;
+  return `${range} · ${t.dayOf(forecast.elapsedDays, forecast.days)}`;
+}
+
+const recurringList = (spends: RangeForecast["recurring"]) =>
+  spends.map((spend) => `${spend.merchant} ${formatCurrency(spend.amount)}`).join(", ");
 
 /** Confronto della previsione con un riferimento: importo e variazione, rossa se è di più. */
 function Comparison({
@@ -64,16 +81,20 @@ function Comparison({
 }
 
 type ForecastCardProps = {
-  forecast: MonthForecast;
+  forecast: RangeForecast;
   /** Vero se negozio o categoria filtrano la previsione. */
   filtered: boolean;
   className?: string;
 };
 
-/** Previsione della spesa del mese in corso, con confronti e mini grafico della proiezione. */
+/**
+ * Spesa del periodo scelto: reale fino a oggi e, se il periodo non è finito, prevista fino alla
+ * fine. Con confronti e grafico cumulato.
+ */
 export function ForecastCard({ forecast, filtered, className }: ForecastCardProps) {
   const note = reliabilityNote(forecast);
-  const weight = Math.round(forecast.currentWeight * 100);
+  const { month } = forecast;
+  const title = forecast.hasProjection ? t.title : t.pastTitle;
   return (
     <section
       aria-labelledby="forecast-title"
@@ -82,11 +103,9 @@ export function ForecastCard({ forecast, filtered, className }: ForecastCardProp
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div>
           <h3 id="forecast-title" className="font-semibold">
-            {t.title}
+            {title}
           </h3>
-          <p className="text-muted-foreground text-sm">
-            {t.dayOf(forecast.dayOfMonth, forecast.daysInMonth)}
-          </p>
+          <p className="text-muted-foreground text-sm">{progress(forecast)}</p>
         </div>
         {note && (
           <Badge variant="secondary" className="gap-1" data-testid="forecast-indicative">
@@ -98,30 +117,36 @@ export function ForecastCard({ forecast, filtered, className }: ForecastCardProp
 
       <dl className="grid grid-cols-2 gap-4">
         <div className="min-w-0">
-          <dt className="text-muted-foreground text-sm">{t.spent}</dt>
+          <dt className="text-muted-foreground text-sm">
+            {forecast.hasProjection ? t.spent : t.spentInPeriod}
+          </dt>
           <dd className="text-2xl font-semibold" data-testid="forecast-spent">
             {formatCurrency(forecast.spent)}
           </dd>
         </div>
-        <div className="min-w-0">
-          <dt className="text-muted-foreground text-sm">{t.projected}</dt>
-          <dd className="text-2xl font-semibold" data-testid="forecast-projected">
-            {note ? "≈ " : ""}
-            {formatCurrency(forecast.projected)}
-          </dd>
-        </div>
+        {forecast.hasProjection && (
+          <div className="min-w-0">
+            <dt className="text-muted-foreground text-sm">{t.projected}</dt>
+            <dd className="text-2xl font-semibold" data-testid="forecast-projected">
+              {note ? "≈ " : ""}
+              {formatCurrency(forecast.projected)}
+            </dd>
+          </div>
+        )}
         <Comparison
           label={t.averageOf(forecast.averageMonths)}
           hint={t.vsAverage}
-          reference={forecast.averageMonthTotal}
+          reference={forecast.averageTotal}
           projected={forecast.projected}
         />
-        <Comparison
-          label={t.previousMonth}
-          hint={t.vsPrevious}
-          reference={forecast.previousMonthTotal}
-          projected={forecast.projected}
-        />
+        {forecast.previousMonthTotal !== null && (
+          <Comparison
+            label={t.previousMonth}
+            hint={t.vsPrevious}
+            reference={forecast.previousMonthTotal}
+            projected={forecast.projected}
+          />
+        )}
       </dl>
 
       <figure className="flex flex-col gap-2">
@@ -135,11 +160,12 @@ export function ForecastCard({ forecast, filtered, className }: ForecastCardProp
               <CartesianGrid vertical={false} stroke="var(--border)" />
               <XAxis
                 dataKey="day"
+                tickFormatter={formatShortDay}
                 tick={axisTick}
                 tickLine={false}
                 axisLine={{ stroke: "var(--border)" }}
                 interval="preserveStartEnd"
-                minTickGap={16}
+                minTickGap={24}
               />
               <YAxis
                 tickFormatter={formatCompactCurrency}
@@ -150,15 +176,15 @@ export function ForecastCard({ forecast, filtered, className }: ForecastCardProp
               />
               <Tooltip
                 contentStyle={tooltipStyle}
-                labelFormatter={(day) => t.day(Number(day))}
+                labelFormatter={(day) => formatShortDay(String(day))}
                 formatter={(value, name) => [
                   formatCurrency(Number(value)),
                   name === "actual" ? t.actual : t.projection,
                 ]}
               />
-              {forecast.averageMonthTotal !== null && (
+              {forecast.averageTotal !== null && (
                 <ReferenceLine
-                  y={forecast.averageMonthTotal}
+                  y={forecast.averageTotal}
                   ifOverflow="extendDomain"
                   stroke="var(--muted-foreground)"
                   strokeOpacity={0.6}
@@ -189,11 +215,13 @@ export function ForecastCard({ forecast, filtered, className }: ForecastCardProp
             <span className="h-0.5 w-4 rounded bg-[var(--chart-1)]" aria-hidden />
             {t.actual}
           </span>
-          <span className="flex items-center gap-1.5">
-            <span className="w-4 border-t-2 border-dashed border-[var(--chart-1)]" aria-hidden />
-            {t.projection}
-          </span>
-          {forecast.averageMonthTotal !== null && (
+          {forecast.hasProjection && (
+            <span className="flex items-center gap-1.5">
+              <span className="w-4 border-t-2 border-dashed border-[var(--chart-1)]" aria-hidden />
+              {t.projection}
+            </span>
+          )}
+          {forecast.averageTotal !== null && (
             <span className="flex items-center gap-1.5">
               <span className="bg-muted-foreground/60 h-px w-4" aria-hidden />
               {t.average}
@@ -204,13 +232,20 @@ export function ForecastCard({ forecast, filtered, className }: ForecastCardProp
 
       <div className="text-muted-foreground flex flex-col gap-1 text-xs">
         {note && <p>{note}</p>}
-        <p>{t.method(formatCurrency(forecast.dailyRate), weight)}</p>
-        {forecast.pendingRecurring.length > 0 && (
+        {month && (
+          <p>{t.method(formatCurrency(month.dailyRate), Math.round(month.currentWeight * 100))}</p>
+        )}
+        {month && month.pendingRecurring.length > 0 && (
           <p>
-            {t.pendingRecurring}:{" "}
-            {forecast.pendingRecurring
-              .map((spend) => `${spend.merchant} ${formatCurrency(spend.amount)}`)
-              .join(", ")}
+            {t.pendingRecurring}: {recurringList(month.pendingRecurring)}
+          </p>
+        )}
+        {forecast.futureDailyRate !== null && (
+          <p>{t.futureMethod(formatCurrency(forecast.futureDailyRate), forecast.futureMonths)}</p>
+        )}
+        {forecast.recurring.length > 0 && (
+          <p>
+            {t.monthlyRecurring}: {recurringList(forecast.recurring)}
           </p>
         )}
         {filtered && <p>{t.filtered}</p>}

@@ -696,10 +696,13 @@ export const it = {
         "Dalle righe degli scontrini: quali prodotti pesano di più e dove li paghi meno.",
     },
     forecast: {
-      title: "Previsione mese corrente",
+      title: "Previsione del periodo",
+      pastTitle: "Spesa nel periodo",
       spent: "Speso finora",
-      projected: "Previsti a fine mese",
-      dayOf: (day: number, days: number) => `Giorno ${day} di ${days}`,
+      spentInPeriod: "Speso nel periodo",
+      projected: "Previsti a fine periodo",
+      dayOf: (day: number, days: number) => `giorno ${day} di ${days}`,
+      notStarted: (range: string) => `${range} · non ancora iniziato`,
       indicative: "Stima indicativa",
       reasonNoHistory:
         "Nessuno storico dei mesi precedenti: la stima segue solo il ritmo di questo mese.",
@@ -709,24 +712,26 @@ export const it = {
           : "Inizio mese: la stima si basa soprattutto sui mesi passati.",
       reasonShortHistory: (months: number) =>
         months === 1 ? "Basata su 1 solo mese di storico." : `Basata su ${months} mesi di storico.`,
-      vsAverage: "rispetto alla media",
+      vsAverage: "rispetto alla media del periodo",
       vsPrevious: "rispetto al mese scorso",
       averageOf: (months: number) =>
         months === 0
-          ? "Media mensile"
+          ? "Spesa media"
           : months === 1
-            ? "Media dell'ultimo mese"
-            : `Media degli ultimi ${months} mesi`,
+            ? "Spesa media (dall'ultimo mese)"
+            : `Spesa media (ultimi ${months} mesi)`,
       previousMonth: "Mese scorso",
       noComparison: "n/d",
       method: (daily: string, weight: number) =>
-        `Ritmo usato per i giorni che mancano: ${daily} al giorno (${weight}% dal ritmo di questo mese, il resto dalla media dei mesi passati).`,
+        `Ritmo usato per i giorni che mancano a fine mese: ${daily} al giorno (${weight}% dal ritmo di questo mese, il resto dalla media dei mesi passati).`,
+      futureMethod: (daily: string, months: number) =>
+        `${months === 1 ? "Mese successivo" : `${months} mesi successivi`}: ${daily} al giorno, media dei mesi passati.`,
+      monthlyRecurring: "Spese ricorrenti contate ogni mese",
       pendingRecurring: "Spese ricorrenti non ancora arrivate, incluse nella previsione",
-      chartLabel: "Spesa cumulata del mese",
+      chartLabel: "Spesa cumulata del periodo",
       actual: "Speso",
       projection: "Proiezione",
-      average: "Media mensile",
-      day: (day: number) => `Giorno ${day}`,
+      average: "Spesa media",
       filtered: "Calcolata sui filtri di negozio e categoria attivi.",
       loadError: "Previsione non disponibile.",
     },
