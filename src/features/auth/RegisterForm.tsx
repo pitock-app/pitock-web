@@ -33,13 +33,17 @@ export function RegisterForm({ mockMode = false }: { mockMode?: boolean }) {
     formState: { errors, isSubmitting },
   } = useForm<RegisterValues>({
     resolver: zodResolver(registerSchema),
-    defaultValues: { email: "", password: "", passwordConfirm: "" },
+    defaultValues: { email: "", password: "", passwordConfirm: "" } as Partial<RegisterValues>,
   });
 
   const onSubmit = handleSubmit(async ({ email, password }) => {
     setFormError(null);
     try {
-      const { needsEmailConfirmation } = await getAuthProvider().signUp(email, password);
+      const { needsEmailConfirmation } = await getAuthProvider().signUp(email, password, {
+        // Prova del consenso (art. 7 GDPR): testo accettato e momento.
+        consent_at: new Date().toISOString(),
+        consent_version: "2026-10",
+      });
       if (needsEmailConfirmation) {
         setConfirmationSent(true);
         return;
@@ -106,6 +110,20 @@ export function RegisterForm({ mockMode = false }: { mockMode?: boolean }) {
             error={errors.passwordConfirm?.message}
             {...register("passwordConfirm")}
           />
+          {(["terms", "health"] as const).map((name) => (
+            <div key={name} className="flex flex-col gap-1 text-sm">
+              <label className="flex gap-2">
+                <input type="checkbox" className="mt-1" {...register(name)} />
+                <span>
+                  {t[name]}{" "}
+                  <Link href="/legal" target="_blank" className="underline underline-offset-4">
+                    {t.legal}
+                  </Link>
+                </span>
+              </label>
+              {errors[name] && <p className="text-destructive">{errors[name].message}</p>}
+            </div>
+          ))}
           {formError && (
             <p role="alert" className="text-destructive text-sm">
               {formError}

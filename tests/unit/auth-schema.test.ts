@@ -21,18 +21,31 @@ describe("schemi dei form di autenticazione", () => {
         email: "a@b.it",
         password: "12345678",
         passwordConfirm: "12345678",
+        terms: true,
+        health: true,
       }).success,
     ).toBe(true);
+    expect(
+      registerSchema.safeParse({
+        email: "a@b.it",
+        password: "12345678",
+        passwordConfirm: "12345678",
+      }).success,
+    ).toBe(false);
     const short = registerSchema.safeParse({
       email: "a@b.it",
       password: "123",
       passwordConfirm: "123",
+      terms: true,
+      health: true,
     });
     expect(short.error?.issues[0]?.message).toBe("La password deve avere almeno 8 caratteri.");
     const mismatch = registerSchema.safeParse({
       email: "a@b.it",
       password: "12345678",
       passwordConfirm: "12345679",
+      terms: true,
+      health: true,
     });
     expect(mismatch.error?.issues[0]).toMatchObject({
       path: ["passwordConfirm"],

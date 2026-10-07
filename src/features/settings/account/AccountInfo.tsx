@@ -1,13 +1,27 @@
 "use client";
 
-import { LogOut, RotateCw } from "lucide-react";
+import { Download, LogOut, RotateCw } from "lucide-react";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useMe, useSession, useSignOut } from "@/features/auth";
+import { api, unwrap } from "@/lib/api/client";
 import { it } from "@/lib/i18n/it";
 import { DeleteAccountDialog } from "./DeleteAccountDialog";
 
 const t = it.settings.account;
+
+/** Portabilità (art. 20 GDPR): scontrini e righe estratti in JSON; i file originali dal dettaglio. */
+async function exportData() {
+  const data = await unwrap(api.GET("/v1/stats/dataset", {}));
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(
+    new Blob([JSON.stringify(data, null, 2)], { type: "application/json" }),
+  );
+  link.download = "pitock-export.json";
+  link.click();
+  URL.revokeObjectURL(link.href);
+}
 
 /** Account (`/settings/account`): email, logout, eliminazione dell'account. */
 export function AccountInfo() {
@@ -45,6 +59,15 @@ export function AccountInfo() {
               ))}
           </dd>
         </dl>
+        <div className="flex flex-wrap items-center gap-3 border-t pt-4">
+          <Button variant="outline" className="h-11" onClick={() => void exportData()}>
+            <Download aria-hidden />
+            {t.export}
+          </Button>
+          <Link href="/legal" className="text-sm underline underline-offset-4">
+            {t.legal}
+          </Link>
+        </div>
         <div className="flex flex-col gap-2 border-t pt-4">
           <p className="text-muted-foreground text-sm">{t.logoutDescription}</p>
           <Button

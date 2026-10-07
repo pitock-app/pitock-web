@@ -19,6 +19,8 @@ export const registerSchema = z
     email,
     password: z.string().min(8, t.passwordTooShort),
     passwordConfirm: z.string(),
+    terms: z.literal(true, t.consentRequired),
+    health: z.literal(true, t.consentRequired),
   })
   .refine((values) => values.password === values.passwordConfirm, {
     message: t.passwordMismatch,

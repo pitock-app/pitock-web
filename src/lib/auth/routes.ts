@@ -5,7 +5,7 @@ export const DEFAULT_AUTHENTICATED_PATH = "/dashboard";
 /** Pagine solo per chi non è autenticato: chi ha già una sessione va alla dashboard. */
 const GUEST_ONLY_PATHS = ["/login", "/register"];
 /** Pagine accessibili a tutti. */
-const PUBLIC_PATHS = ["/auth/callback"];
+const PUBLIC_PATHS = ["/auth/callback", "/legal"];
 
 function matches(pathname: string, base: string) {
   return pathname === base || pathname.startsWith(`${base}/`);

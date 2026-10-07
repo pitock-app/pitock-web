@@ -134,6 +134,7 @@ test("onboarding: due scelte e accesso alle impostazioni AI", async ({ page }) =
   await page.getByLabel("Email").fill("onboarding@pitock.test");
   await page.getByLabel("Password", { exact: true }).fill("password-sicura");
   await page.getByLabel("Conferma password").fill("password-sicura");
+  for (const box of await page.getByRole("checkbox").all()) await box.check();
   await page.getByRole("button", { name: "Registrati" }).click();
   await expect(page).toHaveURL(/\/onboarding$/);
   await expect(page.getByRole("heading", { name: "Usa Pitock AI" })).toBeVisible();

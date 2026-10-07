@@ -45,6 +45,7 @@ test("la registrazione porta all'onboarding", async ({ page }) => {
   await page.getByLabel("Email").fill("nuovo@pitock.test");
   await page.getByLabel("Password", { exact: true }).fill("password-sicura");
   await page.getByLabel("Conferma password").fill("password-sicura");
+  for (const box of await page.getByRole("checkbox").all()) await box.check();
   await page.getByRole("button", { name: "Registrati" }).click();
   await expect(page).toHaveURL(/\/onboarding$/);
   await page.getByRole("link", { name: "Salta per ora" }).click();

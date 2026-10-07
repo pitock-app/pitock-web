@@ -28,7 +28,11 @@ export const it = {
   },
   pages: {
     dashboard: { title: "Dashboard", description: "Dove vanno i tuoi soldi." },
-    add: { title: "Aggiungi scontrino", description: "Foto, file o inserimento manuale." },
+    add: {
+      title: "Aggiungi scontrino",
+      description:
+        "Foto, file o inserimento manuale. I dati vengono letti da un modello di IA e possono contenere errori: controllali.",
+    },
     receipts: { title: "Scontrini", description: "Tutti i tuoi scontrini." },
     receipt: { title: "Dettaglio scontrino" },
     settings: { title: "Impostazioni", description: "Provider AI, consumo e account." },
@@ -61,12 +65,17 @@ export const it = {
     accountMenu: "Menu account",
     retryEmail: "Riprova a caricare l'email",
     checkEmail: "Ti abbiamo inviato un'email: conferma l'indirizzo e poi accedi.",
+    terms: "Accetto i termini di servizio e ho letto l'informativa privacy.",
+    health:
+      "Acconsento al trattamento dei dati sanitari eventualmente presenti negli scontrini (es. farmacia), letti da un modello di IA.",
+    legal: "Termini e privacy",
     mockNotice: "Modalità demo: puoi accedere con qualunque email e password.",
     errors: {
       emailInvalid: "Inserisci un indirizzo email valido.",
       passwordRequired: "Inserisci la password.",
       passwordTooShort: "La password deve avere almeno 8 caratteri.",
       passwordMismatch: "Le password non coincidono.",
+      consentRequired: "Necessario per usare Pitock.",
       invalidCredentials: "Email o password non corretti.",
       emailNotConfirmed: "Conferma l'email prima di accedere.",
       userExists: "Esiste già un account con questa email.",
@@ -249,6 +258,8 @@ export const it = {
       email: "Email",
       emailError: "Non è stato possibile caricare l'email.",
       logoutDescription: "Esci da Pitock su questo dispositivo.",
+      export: "Scarica i miei dati (JSON)",
+      legal: "Termini e privacy",
       dangerTitle: "Elimina account",
       dangerDescription:
         "Cancella definitivamente l'account, tutti gli scontrini, i file, le chiavi API e lo storico dei consumi.",

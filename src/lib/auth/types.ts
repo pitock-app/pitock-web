@@ -43,7 +43,7 @@ export interface AuthProvider {
   /** Rinnova la sessione e restituisce il nuovo access token, o null se non è possibile. */
   refreshSession(): Promise<string | null>;
   signIn(email: string, password: string): Promise<AuthSession>;
-  signUp(email: string, password: string): Promise<SignUpResult>;
+  signUp(email: string, password: string, data?: Record<string, string>): Promise<SignUpResult>;
   signOut(): Promise<void>;
   /** Notifica i cambi di sessione; restituisce la funzione per annullare l'iscrizione. */
   onSessionChange(listener: (session: AuthSession | null) => void): () => void;

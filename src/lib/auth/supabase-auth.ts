@@ -58,11 +58,14 @@ export function createSupabaseAuthProvider(
       if (!session) throw new AuthError("unknown");
       return session;
     },
-    async signUp(email, password) {
+    async signUp(email, password, metadata) {
       const { data, error } = await supabase().auth.signUp({
         email,
         password,
-        options: { emailRedirectTo: `${window.location.origin}/auth/callback?next=/onboarding` },
+        options: {
+          data: metadata,
+          emailRedirectTo: `${window.location.origin}/auth/callback?next=/onboarding`,
+        },
       });
       if (error) throw mapSupabaseAuthError(error);
       return { needsEmailConfirmation: !data.session };
