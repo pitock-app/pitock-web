@@ -1,6 +1,10 @@
+"use client";
+
+import { ChevronDown } from "lucide-react";
 import type { ReactNode } from "react";
 import { it } from "@/lib/i18n/it";
 import { cn } from "@/lib/utils";
+import { CARD_CONTROL, useCardControls } from "./SortableCards";
 
 const t = it.dashboard;
 
@@ -16,7 +20,10 @@ type ChartCardProps = {
   className?: string;
 };
 
-/** Riquadro di un grafico della dashboard, con titolo, descrizione e tabella dei dati. */
+/**
+ * Riquadro di un grafico della dashboard, con titolo, descrizione e tabella dei dati. Dentro
+ * una griglia ordinabile ha anche la maniglia per spostarlo e il comando per chiuderlo.
+ */
 export function ChartCard({
   id,
   title,
@@ -26,28 +33,56 @@ export function ChartCard({
   actions,
   className,
 }: ChartCardProps) {
+  const controls = useCardControls();
+  const collapsed = controls?.collapsed ?? false;
   return (
     <section
       aria-labelledby={`${id}-title`}
-      className={cn("bg-card flex min-w-0 flex-col gap-3 rounded-xl border p-4", className)}
+      className={cn(
+        "bg-card flex min-w-0 flex-col gap-3 rounded-xl border p-4 transition-shadow",
+        controls?.dragging && "ring-ring/40 shadow-xl ring-2",
+        className,
+      )}
     >
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="min-w-0 flex-1 basis-60">
-          <h3 id={`${id}-title`} className="font-semibold">
-            {title}
-          </h3>
-          <p className="text-muted-foreground text-sm">{description}</p>
+      <div className="flex items-start gap-2">
+        {controls?.handle}
+        <div className="flex min-w-0 flex-1 flex-wrap items-start justify-between gap-3">
+          <div className="min-w-0 flex-1 basis-60">
+            <h3 id={`${id}-title`} className="font-semibold">
+              {title}
+            </h3>
+            {!collapsed && <p className="text-muted-foreground text-sm">{description}</p>}
+          </div>
+          {!collapsed && actions}
         </div>
-        {actions}
+        {controls && (
+          <button
+            type="button"
+            onClick={controls.toggle}
+            aria-expanded={!collapsed}
+            aria-controls={`${id}-body`}
+            aria-label={collapsed ? t.layout.expand(title) : t.layout.collapse(title)}
+            className={cn(CARD_CONTROL, "-my-2 -mr-2 sm:-my-1")}
+          >
+            <ChevronDown
+              className={cn("size-4 transition-transform", collapsed && "-rotate-90")}
+              aria-hidden
+            />
+          </button>
+        )}
       </div>
-      {children}
-      {table && (
-        <details className="text-sm">
-          <summary className="text-muted-foreground hover:text-foreground focus-visible:ring-ring/50 min-h-11 cursor-pointer content-center rounded-sm outline-none focus-visible:ring-[3px]">
-            {t.chartTable}
-          </summary>
-          <div className="max-h-72 overflow-auto">{table}</div>
-        </details>
+      {!collapsed && (
+        <div id={`${id}-body`} className="flex flex-col gap-3">
+          {children}
+          {table && (
+            <details className="text-sm">
+              <summary className="text-muted-foreground hover:text-foreground focus-visible:ring-ring/50 min-h-11 cursor-pointer content-center rounded-sm outline-none focus-visible:ring-[3px]">
+                {t.chartTable}
+              </summary>
+              <div className="max-h-72 overflow-auto">{table}</div>
+            </details>
+          )}
+        </div>
       )}
     </section>
   );

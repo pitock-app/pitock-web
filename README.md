@@ -47,16 +47,22 @@ How the experiment was set up:
 
 ## 🖥️ What you can do
 
-| Page                    | What it offers                                                                                                                                                                                                                                                                                                                                     |
-| ----------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **`/add`**              | Three tabs: **Photo** (phone or webcam camera), **File** (drag & drop images or PDF, many at once), **Manual** (form with line items, Italian amounts like `12,50`). HEIC is converted, large images are compressed, SHA-256 detects duplicates before upload. A live queue shows every file: uploading → processing → ready / duplicate / failed. |
-| **`/receipts`**         | List with filters kept in the URL (date, status, category, source, text). Detail page with the original file viewer, editable extraction, re-extraction with another model, extraction history, delete.                                                                                                                                            |
-| **`/dashboard`**        | Period picker (this month, last month, last 12 months, this year, custom), global filters by **store** and **category**, forecast, savings, KPIs, charts and product price analytics.                                                                                                                                                              |
-| **`/settings/ai`**      | Platform model or **your own key** (Anthropic, OpenAI, OpenRouter), live model list, connection test, fallback to platform. Only the last 4 characters of a key ever reach the page.                                                                                                                                                               |
-| **`/settings/usage`**   | Tokens, calls and cost per day and per model, recent LLM calls, platform quota bar.                                                                                                                                                                                                                                                                |
-| **`/settings/account`** | Account info and full account deletion.                                                                                                                                                                                                                                                                                                            |
+| Page                    | What it offers                                                                                                                                                                                                                                                                                                                                         |
+| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **`/add`**              | Three tabs: **Photo** (phone or webcam camera), **File** (drag & drop images or PDF, many at once), **Manual** (form with line items, Italian amounts like `12,50`). HEIC is converted, large images are compressed, SHA-256 detects duplicates before upload. A live queue shows every file: uploading → processing → ready / duplicate / failed.     |
+| **`/receipts`**         | List with filters kept in the URL (date, status, category, source, text). Detail page with the original file viewer, editable extraction, re-extraction with another model, extraction history, delete.                                                                                                                                                |
+| **`/dashboard`**        | Period picker (this month, last month, last 12 months, this year, custom), global filters by **store** and **category**, forecast, savings, KPIs, charts, **avoidable spending** and product price analytics. Click a slice, a level or a bar segment to see the purchases behind it. Every chart card can be collapsed and dragged to a new position. |
+| **`/settings/ai`**      | Platform model or **your own key** (Anthropic, OpenAI, OpenRouter), live model list, connection test, fallback to platform. Only the last 4 characters of a key ever reach the page.                                                                                                                                                                   |
+| **`/settings/usage`**   | Tokens, calls and cost per day and per model, recent LLM calls, platform quota bar.                                                                                                                                                                                                                                                                    |
+| **`/settings/account`** | Account info and full account deletion.                                                                                                                                                                                                                                                                                                                |
 
 Responsive layout (sidebar on desktop, bottom nav on mobile), dark theme, accessible charts (every chart has a data-table alternative).
+
+### 🧩 Your dashboard, your layout
+
+- **Collapse** any chart card with the chevron in its header: only the title stays visible.
+- **Reorder** cards inside their section by dragging the ⋮⋮ handle — mouse on desktop, finger on mobile (only the handle starts a drag, so page scrolling still works), or keyboard (space to pick up, arrows to move, space to drop, Esc to cancel).
+- The layout is saved in the browser (`localStorage`, per device). **Reset layout** next to the period picker brings back the default order.
 
 ---
 
@@ -275,6 +281,29 @@ once per month. The chart draws the actual cumulative spend up to today and the 
 **Comparisons** shown next to the forecast: last month’s total and the average of complete
 history months, pro-rated to the days of the selected period.
 
+### 8. Avoidable spending
+
+The LLM tags every product line, and the receipt as a whole, with one of three levels:
+**essential** (`essenziale`, basic needs), **useful** (`utile`, needed but could have waited or cost less)
+and **superfluous** (`superfluo`, could have been skipped). A spending line takes the level of its item,
+otherwise the level of its receipt; receipts extracted before the feature are **unclassified**.
+
+With $E$, $U$, $S$ the amounts of essential, useful and superfluous lines in the period, the
+**avoidability index** (0–100) weighs useful spend half and superfluous spend in full:
+
+$$
+\text{index} = \frac{0.5\,U + S}{E + U + S} \times 100 \qquad \text{avoidable €} = 0.5\,U + S
+$$
+
+Unclassified spend stays out of the index and is reported separately; with no classified spend the index is empty.
+
+| Card                      | What it shows                                                                                                                                                                                |
+| ------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Avoidability index**    | The index, the avoidable euros and a 100 % bar split by level. Clicking a level lists its purchases for the period, most expensive first, each linked to its receipt.                        |
+| **Avoidability by month** | Stacked bars per month (or year) with a tooltip of amounts, total and monthly index. Clicking a segment lists the purchases of that level in that month; the legend covers the whole period. |
+
+The listed purchases of a level always add up to its segment.
+
 ---
 
 ## 🏗️ Architecture
@@ -283,7 +312,7 @@ history months, pro-rated to the days of the selected period.
 src/
 ├─ app/                 Next.js App Router: (auth) login/register · (app) add, receipts, dashboard, settings
 ├─ features/            one folder per feature: capture · manual-entry · receipts · dashboard · settings · auth
-│  └─ dashboard/lib/    pure, unit-tested metric functions (dataset, products, forecast, periods)
+│  └─ dashboard/lib/    pure, unit-tested metric functions (dataset, products, forecast, periods, avoidability) + saved layout
 ├─ components/          layout shell and shadcn/ui primitives
 ├─ lib/
 │  ├─ api/              openapi-fetch client typed from the contract, query keys, errors
@@ -296,6 +325,7 @@ src/
 - **Server state** with TanStack Query, **local state** (upload queue) with Zustand, forms with React Hook Form + Zod.
 - **Uploads go straight to Supabase Storage** with a short-lived signed URL; the API only receives ids.
 - Charts with Recharts; every chart has an accessible table view.
+- Draggable cards with [dnd-kit](https://dndkit.com/) (pointer, touch and keyboard sensors, Italian screen-reader announcements).
 
 ## 🧪 Quality
 

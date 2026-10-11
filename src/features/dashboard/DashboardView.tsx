@@ -1,6 +1,6 @@
 "use client";
 
-import { Filter, LayoutDashboard, Loader2, Plus } from "lucide-react";
+import { Filter, LayoutDashboard, Loader2, Plus, RotateCcw } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useRef } from "react";
@@ -23,6 +23,7 @@ import { useStats } from "./hooks/useStats";
 import { useStatsDataset } from "./hooks/useStatsDataset";
 import { KpiCards } from "./KpiCards";
 import { storeColors } from "./lib/colors";
+import { useDashboardLayout } from "./lib/layout";
 import {
   currentRange,
   granularityOf,
@@ -50,6 +51,7 @@ import { PriceHistory } from "./PriceHistory";
 import { PriceChanges, SavingsRanking, TopProducts } from "./ProductRankings";
 import { SavingsCard } from "./SavingsCard";
 import { SavingsTips } from "./SavingsTips";
+import { SortableCards } from "./SortableCards";
 import { SourceSplit } from "./SourceSplit";
 import { StoreComparison } from "./StoreComparison";
 import { TopMerchants } from "./TopMerchants";
@@ -117,6 +119,7 @@ export function DashboardView() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const filters = useMemo(() => parseDashboardFilters(searchParams), [searchParams]);
+  const { customized, reset: resetLayout } = useDashboardLayout();
   // Le date si calcolano al cambio di periodo, non a ogni render.
   const { range, query, keys, granularity, today, historyQuery } = useMemo(() => {
     const range = currentRange(filters);
@@ -311,22 +314,47 @@ export function DashboardView() {
           title={t.sections.overview}
           description={t.sections.overviewDescription}
         >
-          <div className="grid gap-4 lg:grid-cols-2">
-            <PeriodBars
-              rows={summary.byPeriod}
-              granularity={summary.granularity}
-              // Con i dati del periodo precedente ancora a schermo le chiavi non corrispondono.
-              keys={dataset.isPlaceholderData ? null : keys}
-            />
-            <CategoryPie rows={summary.byCategory} total={summary.totals.total} lines={lines} />
-            <TopMerchants
-              rows={summary.topMerchants}
-              withoutMerchant={summary.withoutMerchant}
-              total={summary.totals.total}
-              colorOf={colorOf}
-            />
-            <SourceSplit rows={summary.bySource} total={summary.totals.total} />
-          </div>
+          <SortableCards
+            section="overview"
+            cards={[
+              {
+                id: "by-period",
+                node: (
+                  <PeriodBars
+                    rows={summary.byPeriod}
+                    granularity={summary.granularity}
+                    // Con i dati del periodo precedente ancora a schermo le chiavi non corrispondono.
+                    keys={dataset.isPlaceholderData ? null : keys}
+                  />
+                ),
+              },
+              {
+                id: "by-category",
+                node: (
+                  <CategoryPie
+                    rows={summary.byCategory}
+                    total={summary.totals.total}
+                    lines={lines}
+                  />
+                ),
+              },
+              {
+                id: "top-merchants",
+                node: (
+                  <TopMerchants
+                    rows={summary.topMerchants}
+                    withoutMerchant={summary.withoutMerchant}
+                    total={summary.totals.total}
+                    colorOf={colorOf}
+                  />
+                ),
+              },
+              {
+                id: "by-source",
+                node: <SourceSplit rows={summary.bySource} total={summary.totals.total} />,
+              },
+            ]}
+          />
         </DashboardSection>
 
         <DashboardSection
@@ -334,14 +362,25 @@ export function DashboardView() {
           title={t.sections.avoidability}
           description={t.sections.avoidabilityDescription}
         >
-          <div className="grid gap-4 lg:grid-cols-2">
-            <AvoidabilityOverview totals={avoidability} lines={lines} />
-            <AvoidabilityByPeriod
-              lines={lines}
-              granularity={summary.granularity}
-              keys={dataset.isPlaceholderData ? null : keys}
-            />
-          </div>
+          <SortableCards
+            section="avoidability"
+            cards={[
+              {
+                id: "avoidability",
+                node: <AvoidabilityOverview totals={avoidability} lines={lines} />,
+              },
+              {
+                id: "avoidability-by-period",
+                node: (
+                  <AvoidabilityByPeriod
+                    lines={lines}
+                    granularity={summary.granularity}
+                    keys={dataset.isPlaceholderData ? null : keys}
+                  />
+                ),
+              },
+            ]}
+          />
         </DashboardSection>
 
         <DashboardSection
@@ -349,15 +388,24 @@ export function DashboardView() {
           title={t.sections.products}
           description={t.sections.productsDescription}
         >
-          <div className="grid gap-4 lg:grid-cols-2">
-            <TopProducts products={products} />
-            <SavingsRanking products={products} />
-            <StoreComparison products={products} colorOf={colorOf} />
-            <PriceChanges products={products} />
-            <PriceHistory products={products} purchases={purchases} colorOf={colorOf} />
-            <UnitPrices products={products} />
-            <FrequencyChart products={products} />
-          </div>
+          <SortableCards
+            section="products"
+            cards={[
+              { id: "top-products", node: <TopProducts products={products} /> },
+              { id: "savings-ranking", node: <SavingsRanking products={products} /> },
+              {
+                id: "store-comparison",
+                node: <StoreComparison products={products} colorOf={colorOf} />,
+              },
+              { id: "price-changes", node: <PriceChanges products={products} /> },
+              {
+                id: "price-history",
+                node: <PriceHistory products={products} purchases={purchases} colorOf={colorOf} />,
+              },
+              { id: "unit-prices", node: <UnitPrices products={products} /> },
+              { id: "frequency", node: <FrequencyChart products={products} /> },
+            ]}
+          />
         </DashboardSection>
       </>
     );
@@ -382,6 +430,12 @@ export function DashboardView() {
               </>
             )}
           </span>
+          {customized && (
+            <Button variant="ghost" size="sm" className="ml-auto h-11" onClick={resetLayout}>
+              <RotateCcw aria-hidden />
+              {t.layout.reset}
+            </Button>
+          )}
         </div>
         <DimensionFilters
           stores={stores}

@@ -39,6 +39,7 @@ const money = (value: number) => formatCurrency(value).replace(/\s/g, " ");
 
 beforeEach(async () => {
   vi.clearAllMocks();
+  window.localStorage.clear();
   // Intervallo fisso: settembre 2026.
   nav.search = new URLSearchParams("period=custom&from=2026-09-01&to=2026-09-30");
   const auth = createMockAuthProvider();
@@ -409,5 +410,47 @@ describe("DashboardView", () => {
     ).toBeInTheDocument();
     // Parte solo lo storico della previsione, non il periodo sbagliato.
     expect(queries.map((query) => query.get("from"))).not.toContain("2026-09-30");
+  });
+
+  it("chiude una card, la riapre e ripristina il layout", async () => {
+    const user = userEvent.setup();
+    mockDataset({ current: dataset });
+    renderWithQuery(<DashboardView />);
+    const card = await screen.findByRole("region", { name: "Per categoria" });
+    expect(within(card).getByTestId("category-legend")).toBeInTheDocument();
+
+    await user.click(within(card).getByRole("button", { name: "Chiudi «Per categoria»" }));
+    expect(within(card).queryByTestId("category-legend")).not.toBeInTheDocument();
+    expect(within(card).getByRole("button", { name: "Apri «Per categoria»" })).toHaveAttribute(
+      "aria-expanded",
+      "false",
+    );
+    expect(window.localStorage.getItem("pitock.dashboard.layout.v1")).toContain("by-category");
+
+    await user.click(screen.getByRole("button", { name: "Ripristina layout" }));
+    expect(within(card).getByTestId("category-legend")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Ripristina layout" })).not.toBeInTheDocument();
+    expect(window.localStorage.getItem("pitock.dashboard.layout.v1")).toBeNull();
+  });
+
+  it("mostra le card nell'ordine salvato, con le nuove in coda", async () => {
+    window.localStorage.setItem(
+      "pitock.dashboard.layout.v1",
+      JSON.stringify({
+        order: { overview: ["by-source", "gone", "top-merchants"] },
+        collapsed: [],
+      }),
+    );
+    mockDataset({ current: dataset });
+    const { container } = renderWithQuery(<DashboardView />);
+    await screen.findByRole("region", { name: "Per categoria" });
+    const section = container.querySelector("section[aria-labelledby=overview-heading]")!;
+    const ids = [...section.querySelectorAll("[data-card-id]")].map((el) =>
+      el.getAttribute("data-card-id"),
+    );
+    expect(ids).toEqual(["by-source", "top-merchants", "by-period", "by-category"]);
+    expect(
+      within(section as HTMLElement).getByRole("button", { name: "Sposta Per categoria" }),
+    ).toBeInTheDocument();
   });
 });

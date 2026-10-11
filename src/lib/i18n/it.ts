@@ -860,6 +860,21 @@ export const it = {
       purchasesOf: (level: string, period: string | null) =>
         period ? `Acquisti «${level}» · ${period}` : `Acquisti «${level}» nel periodo`,
     },
+    layout: {
+      move: "Sposta",
+      collapse: (title: string) => `Chiudi «${title}»`,
+      expand: (title: string) => `Apri «${title}»`,
+      reset: "Ripristina layout",
+      instructions:
+        "Premi spazio o invio per prendere la card, usa le frecce per spostarla, premi di nuovo spazio o invio per lasciarla oppure Esc per annullare.",
+      picked: (title: string, position: number, count: number) =>
+        `Hai preso «${title}», posizione ${position} di ${count}.`,
+      moved: (title: string, position: number, count: number) =>
+        `«${title}» in posizione ${position} di ${count}.`,
+      dropped: (title: string, position: number, count: number) =>
+        `«${title}» lasciata in posizione ${position} di ${count}.`,
+      cancelled: (title: string) => `Spostamento di «${title}» annullato.`,
+    },
     categoryDrill: {
       hint: "Scegli una categoria per vedere le sue voci, riga per riga.",
       back: "Tutte le categorie",
