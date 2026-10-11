@@ -32,6 +32,7 @@ import {
   type DashboardFilters,
 } from "./lib/dashboard-period";
 import {
+  categoryLines,
   filterDataset,
   receiptAmounts,
   storeOptions,
@@ -151,9 +152,11 @@ export function DashboardView() {
     const { receipts, items } = filterDataset(dataset.data, dimensions);
     const amounts = receiptAmounts(receipts, items, dimensions.category);
     const purchases = toPurchases(receipts, items);
+    const lines = categoryLines(receipts, items, amounts);
     return {
       receipts,
-      summary: summarize(receipts, amounts, granularity),
+      summary: summarize(receipts, amounts, granularity, lines),
+      lines,
       purchases,
       products: productStats(purchases),
     };
@@ -277,7 +280,7 @@ export function DashboardView() {
         />
       );
     }
-    const { summary, products, purchases } = view;
+    const { summary, products, purchases, lines } = view;
     return (
       <>
         {dataset.data?.truncated && (
@@ -312,11 +315,7 @@ export function DashboardView() {
               // Con i dati del periodo precedente ancora a schermo le chiavi non corrispondono.
               keys={dataset.isPlaceholderData ? null : keys}
             />
-            <CategoryPie
-              rows={summary.byCategory}
-              total={summary.totals.total}
-              purchases={purchases}
-            />
+            <CategoryPie rows={summary.byCategory} total={summary.totals.total} lines={lines} />
             <TopMerchants
               rows={summary.topMerchants}
               withoutMerchant={summary.withoutMerchant}

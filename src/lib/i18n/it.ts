@@ -829,10 +829,14 @@ export const it = {
       none: "Nessun prodotto comprato più di una volta nel periodo.",
     },
     categoryDrill: {
-      hint: "Scegli una categoria per vedere i suoi acquisti.",
+      hint: "Scegli una categoria per vedere le sue voci, riga per riga.",
       back: "Tutte le categorie",
-      purchasesOf: (category: string) => `Acquisti in ${category}`,
-      none: "Nessun acquisto in questa categoria.",
+      purchasesOf: (category: string) => `Voci in ${category}`,
+      none: "Nessuna voce in questa categoria.",
+      lines: (count: number) => (count === 1 ? "1 voce" : `${count} voci`),
+      rest: "Altre voci dello scontrino",
+      discounts: "Sconti e arrotondamenti",
+      wholeReceipt: "Scontrino senza righe",
     },
   },
   states: {

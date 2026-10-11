@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { filterDataset, receiptAmounts, summarize } from "@/features/dashboard/lib/dataset";
+import {
+  categoryLines,
+  filterDataset,
+  receiptAmounts,
+  summarize,
+} from "@/features/dashboard/lib/dataset";
 import {
   formatComparison,
   packSize,
@@ -204,6 +209,45 @@ describe("filtri del dataset", () => {
     expect(
       summarize(receipts, receiptAmounts(receipts, [], undefined), "month").withoutMerchant,
     ).toBeNull();
+  });
+});
+
+describe("voci per categoria", () => {
+  const receipts = [
+    { ...receipt("a", "2026-10-01T09:00:00Z", "Lidl", 12), category: "alimentari" as const },
+    { ...receipt("b", "2026-10-02T09:00:00Z", "Enel", 110), category: "servizi" as const },
+  ];
+  const items = [
+    item("a", "LATTE", 2),
+    item("a", "DETERSIVO", 10, 1, 10, "casa"),
+    item("a", "SCONTO", null, null, -0.5),
+  ];
+
+  it("ogni riga conta nella sua categoria e il resto in quella dello scontrino", () => {
+    const amounts = receiptAmounts(receipts, items);
+    const lines = categoryLines(receipts, items, amounts);
+    expect(lines.map((l) => [l.receiptId, l.kind, l.category, l.amount])).toEqual([
+      ["b", "receipt", "servizi", 110],
+      ["a", "item", "alimentari", 2],
+      ["a", "item", "casa", 10],
+      ["a", "item", "alimentari", -0.5],
+      ["a", "rest", "alimentari", 0.5],
+    ]);
+    const summary = summarize(receipts, amounts, "month", lines);
+    expect(summary.byCategory).toEqual([
+      { category: "servizi", total: 110, nReceipts: 1 },
+      { category: "casa", total: 10, nReceipts: 1 },
+      { category: "alimentari", total: 2, nReceipts: 1 },
+    ]);
+    const slices = summary.byCategory.reduce((sum, row) => sum + row.total, 0);
+    expect(slices).toBe(summary.totals.total);
+  });
+
+  it("con il filtro di categoria le voci sono solo quelle della categoria", () => {
+    const casa = filterDataset({ receipts, items }, { category: "casa" });
+    const amounts = receiptAmounts(casa.receipts, casa.items, "casa");
+    const lines = categoryLines(casa.receipts, casa.items, amounts);
+    expect(lines.map((l) => [l.label, l.category, l.amount])).toEqual([["Detersivo", "casa", 10]]);
   });
 });
 

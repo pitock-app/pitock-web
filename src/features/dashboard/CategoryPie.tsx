@@ -9,44 +9,50 @@ import { it } from "@/lib/i18n/it";
 import { BarList } from "./BarList";
 import { ChartCard, DataTable, NoData, shareOf, tooltipStyle } from "./ChartCard";
 import { categoryColor } from "./lib/colors";
-import type { Summary } from "./lib/dataset";
-import type { Category, Purchase } from "./lib/products";
+import type { CategoryLine, Summary } from "./lib/dataset";
+import type { Category } from "./lib/products";
 
 const t = it.dashboard;
 
 type CategoryPieProps = {
   rows: Summary["byCategory"];
   total: number;
-  /** Acquisti del periodo: al clic su una categoria si vedono quelli con la sua categoria di riga. */
-  purchases: Purchase[];
+  /** Voci di spesa del periodo, dal più recente: al clic su una categoria si vedono le sue. */
+  lines: CategoryLine[];
 };
 
-/** "2 pz", "0,296 kg"; nulla per il singolo pezzo. */
-function quantityLabel(p: Purchase) {
-  if (p.unit === "pz" && p.quantity === 1) return null;
-  return `${formatNumber(p.quantity, p.unit === "kg" ? 3 : 0)} ${p.unit}`;
+/** "× 2", "× 0,296"; nulla per il singolo pezzo. */
+function quantityLabel(line: CategoryLine) {
+  if (line.quantity === null || line.quantity === 1) return null;
+  return `× ${formatNumber(line.quantity, Number.isInteger(line.quantity) ? 0 : 3)}`;
+}
+
+function lineLabel(line: CategoryLine) {
+  if (line.kind === "item") return line.label ?? "";
+  return line.kind === "rest"
+    ? line.amount < 0
+      ? t.categoryDrill.discounts
+      : t.categoryDrill.rest
+    : t.categoryDrill.wholeReceipt;
 }
 
 /**
  * Ciambella della spesa per categoria. Ogni categoria ha sempre lo stesso colore; la legenda
- * riporta importi e quote e, al clic, apre i singoli acquisti della categoria, dal più recente.
- * Gli acquisti seguono la categoria della riga, quindi la loro somma può differire dalla
- * fetta, che segue quella dello scontrino.
+ * riporta importi e quote e, al clic, apre le voci della categoria riga per riga, dal più
+ * recente. Fette e voci seguono la categoria della riga, quindi la somma delle voci è la fetta.
  */
-export function CategoryPie({ rows, total, purchases }: CategoryPieProps) {
+export function CategoryPie({ rows, total, lines }: CategoryPieProps) {
   const [selected, setSelected] = useState<Category | null>(null);
   const slices = rows.map((row) => ({
     ...row,
     label: it.categories[row.category],
     color: categoryColor(row.category),
   }));
+  // Una categoria in negativo (solo sconti) non ha fetta: resta nella legenda.
+  const pieSlices = slices.filter((slice) => slice.total > 0);
   const active = selected && rows.some((row) => row.category === selected) ? selected : null;
-  const categoryPurchases = active
-    ? purchases
-        .filter((p) => p.category === active)
-        .sort((a, b) => b.day.localeCompare(a.day) || a.label.localeCompare(b.label))
-    : [];
-  const purchasesTotal = categoryPurchases.reduce((sum, p) => sum + p.amount, 0);
+  const categoryLines = active ? lines.filter((line) => line.category === active) : [];
+  const linesTotal = categoryLines.reduce((sum, line) => sum + line.amount, 0);
 
   return (
     <ChartCard
@@ -86,7 +92,7 @@ export function CategoryPie({ rows, total, purchases }: CategoryPieProps) {
             <ChevronLeft aria-hidden />
             {t.categoryDrill.back}
           </Button>
-          {categoryPurchases.length === 0 ? (
+          {categoryLines.length === 0 ? (
             <NoData>{t.categoryDrill.none}</NoData>
           ) : (
             <>
@@ -94,16 +100,16 @@ export function CategoryPie({ rows, total, purchases }: CategoryPieProps) {
                 className="text-muted-foreground text-sm tabular-nums"
                 data-testid="category-purchases-total"
               >
-                {t.purchases(categoryPurchases.length)} · {formatCurrency(purchasesTotal)}
+                {t.categoryDrill.lines(categoryLines.length)} · {formatCurrency(linesTotal)}
               </p>
               <BarList
-                rows={categoryPurchases.map((p, index) => ({
-                  key: `${p.receiptId}-${index}`,
-                  label: p.label,
-                  value: p.amount,
+                rows={categoryLines.map((line) => ({
+                  key: line.key,
+                  label: lineLabel(line),
+                  value: line.amount,
                   color: categoryColor(active),
-                  href: `/receipts/${p.receiptId}`,
-                  detail: [formatDate(p.day), p.merchant, quantityLabel(p)]
+                  href: `/receipts/${line.receiptId}`,
+                  detail: [formatDate(line.day), line.merchant, quantityLabel(line)]
                     .filter(Boolean)
                     .join(" · "),
                 }))}
@@ -117,7 +123,7 @@ export function CategoryPie({ rows, total, purchases }: CategoryPieProps) {
             <ResponsiveContainer width="100%" height="100%">
               <PieChart accessibilityLayer={false}>
                 <Pie
-                  data={slices}
+                  data={pieSlices}
                   dataKey="total"
                   nameKey="label"
                   innerRadius="58%"
@@ -127,9 +133,9 @@ export function CategoryPie({ rows, total, purchases }: CategoryPieProps) {
                   isAnimationActive={false}
                   rootTabIndex={-1}
                   className="cursor-pointer"
-                  onClick={(_, index) => setSelected(slices[index]?.category ?? null)}
+                  onClick={(_, index) => setSelected(pieSlices[index]?.category ?? null)}
                 >
-                  {slices.map((slice) => (
+                  {pieSlices.map((slice) => (
                     <Cell key={slice.category} fill={slice.color} />
                   ))}
                 </Pie>

@@ -187,19 +187,26 @@ describe("DashboardView", () => {
     expect(screen.getByTestId("forecast-indicative")).toHaveTextContent("Stima indicativa");
   });
 
-  it("al clic su una categoria mostra i suoi acquisti con il link allo scontrino", async () => {
+  it("al clic su una categoria mostra le sue voci riga per riga, con il totale della fetta", async () => {
     const user = userEvent.setup();
     mockDataset({ current: dataset });
     renderWithQuery(<DashboardView />);
     const legend = await screen.findByTestId("category-legend");
-    await user.click(within(legend).getByRole("button", { name: /Casa/ }));
+    // r4 (casa, 30 €): detersivo 2,50 € in casa, latte 1,59 € in alimentari, il resto in casa.
+    const casa = within(legend).getByRole("button", { name: /Casa/ });
+    expect(casa).toHaveTextContent(money(28.41));
+    await user.click(casa);
     const card = screen.getByRole("region", { name: "Per categoria" });
     const purchase = within(card).getByRole("link", { name: /Detersivo piatti/ });
     expect(purchase).toHaveAttribute("href", "/receipts/r4");
     expect(purchase).toHaveTextContent("20 set 2026");
     expect(purchase).toHaveTextContent("Esselunga");
+    expect(
+      within(card).getByRole("link", { name: /Altre voci dello scontrino/ }),
+    ).toHaveTextContent(money(25.91));
+    expect(within(card).queryByText(/Latte intero/)).not.toBeInTheDocument();
     expect(within(card).getByTestId("category-purchases-total")).toHaveTextContent(
-      `1 acquisto · ${money(2.5)}`,
+      `2 voci · ${money(28.41)}`,
     );
     await user.click(within(card).getByRole("button", { name: "Tutte le categorie" }));
     expect(within(card).getByTestId("category-legend")).toBeInTheDocument();

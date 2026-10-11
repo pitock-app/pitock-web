@@ -1,6 +1,6 @@
 import type { components } from "@/lib/api/schema";
 import { toRomeDateInput } from "@/lib/format";
-import type { Category, ItemFact, ReceiptFact } from "./products";
+import { productLabel, type Category, type ItemFact, type ReceiptFact } from "./products";
 
 type Schemas = components["schemas"];
 export type Dataset = Schemas["StatsDataset"];
@@ -56,6 +56,79 @@ export function receiptAmounts(
   return amounts;
 }
 
+/** Una voce di spesa: una riga dello scontrino, oppure la parte del totale non coperta dalle righe. */
+export type CategoryLine = {
+  key: string;
+  receiptId: string;
+  /** Giorno di Roma (YYYY-MM-DD). */
+  day: string;
+  merchant: string | null;
+  category: Category;
+  /** Descrizione della riga; null per le voci che chiudono il totale. */
+  label: string | null;
+  kind: "item" | "rest" | "receipt";
+  quantity: number | null;
+  amount: number;
+};
+
+/**
+ * Voci di spesa per categoria, dal più recente. Ogni riga conta nella sua categoria; la
+ * differenza tra l'importo dello scontrino e le sue righe (sconti, righe senza importo) conta
+ * nella categoria dello scontrino, e uno scontrino senza righe conta per intero. La somma delle
+ * voci torna quindi agli importi di `receiptAmounts`.
+ */
+export function categoryLines(
+  receipts: ReceiptFact[],
+  items: ItemFact[],
+  amounts: Map<string, number>,
+): CategoryLine[] {
+  const byReceipt = new Map<string, ItemFact[]>();
+  for (const item of items) {
+    const list = byReceipt.get(item.receiptId);
+    if (list) list.push(item);
+    else byReceipt.set(item.receiptId, [item]);
+  }
+  const lines: CategoryLine[] = [];
+  for (const receipt of receipts) {
+    const base = {
+      receiptId: receipt.id,
+      day: toRomeDateInput(new Date(receipt.date)),
+      merchant: receipt.merchantName?.trim() || null,
+    };
+    let covered = 0;
+    const receiptItems = byReceipt.get(receipt.id) ?? [];
+    receiptItems.forEach((item, index) => {
+      const amount =
+        item.amount ?? (item.unitPrice !== null ? item.unitPrice * (item.quantity ?? 1) : null);
+      if (amount === null || amount === 0) return;
+      covered += amount;
+      lines.push({
+        ...base,
+        key: `${receipt.id}-${index}`,
+        category: item.category,
+        label: productLabel(item.description) || item.description,
+        kind: "item",
+        quantity: item.quantity,
+        amount: round2(amount),
+      });
+    });
+    // Senza totale lo scontrino vale le sue righe: non c'è altro da chiudere.
+    if (receipt.total === null && receiptItems.length > 0) continue;
+    const rest = round2((amounts.get(receipt.id) ?? 0) - covered);
+    if (Math.abs(rest) < 0.01) continue;
+    lines.push({
+      ...base,
+      key: `${receipt.id}-rest`,
+      category: receipt.category,
+      label: null,
+      kind: receiptItems.length > 0 ? "rest" : "receipt",
+      quantity: null,
+      amount: rest,
+    });
+  }
+  return lines.sort((a, b) => b.day.localeCompare(a.day) || a.receiptId.localeCompare(b.receiptId));
+}
+
 function add<K extends string>(map: Map<K, Amounts>, key: K, total: number) {
   const previous = map.get(key) ?? { total: 0, nReceipts: 0 };
   map.set(key, { total: previous.total + total, nReceipts: previous.nReceipts + 1 });
@@ -68,14 +141,29 @@ const rows = <K extends string>(map: Map<K, Amounts>) =>
     nReceipts: value.nReceipts,
   }));
 
-/** Riepilogo come `GET /v1/stats`, calcolato sugli scontrini già filtrati. */
+/**
+ * Riepilogo come `GET /v1/stats`, calcolato sugli scontrini già filtrati. A differenza
+ * dell'API la spesa per categoria segue le voci (`categoryLines`), non la categoria dello
+ * scontrino: `nReceipts` conta gli scontrini con almeno una voce nella categoria.
+ */
 export function summarize(
   receipts: ReceiptFact[],
   amounts: Map<string, number>,
   granularity: Schemas["Stats"]["granularity"],
+  lines: CategoryLine[] = categoryLines(receipts, [], amounts),
 ) {
   let total = 0;
   const byCategory = new Map<Category, Amounts>();
+  const seen = new Set<string>();
+  for (const line of lines) {
+    const previous = byCategory.get(line.category) ?? { total: 0, nReceipts: 0 };
+    const id = `${line.category}|${line.receiptId}`;
+    byCategory.set(line.category, {
+      total: previous.total + line.amount,
+      nReceipts: previous.nReceipts + (seen.has(id) ? 0 : 1),
+    });
+    seen.add(id);
+  }
   const byPeriod = new Map<string, Amounts>();
   const byMerchant = new Map<string, Amounts>();
   const bySource = new Map<Schemas["ReceiptSource"], Amounts>();
@@ -83,7 +171,6 @@ export function summarize(
   for (const receipt of receipts) {
     const amount = amounts.get(receipt.id) ?? 0;
     total += amount;
-    add(byCategory, receipt.category, amount);
     const day = toRomeDateInput(new Date(receipt.date));
     add(byPeriod, granularity === "year" ? day.slice(0, 4) : day.slice(0, 7), amount);
     const merchant = receipt.merchantName?.trim();
@@ -99,6 +186,7 @@ export function summarize(
     granularity,
     totals: { total: round2(total), nReceipts: n, average: n > 0 ? round2(total / n) : 0 },
     byCategory: rows(byCategory)
+      .filter((row) => row.total !== 0)
       .map(({ key, ...rest }) => ({ category: key, ...rest }))
       .sort((a, b) => b.total - a.total || a.category.localeCompare(b.category)),
     byPeriod: rows(byPeriod)
