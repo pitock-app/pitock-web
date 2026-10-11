@@ -2104,7 +2104,7 @@ export interface components {
         /** @enum {string} */
         PaymentMethod: "contanti" | "carta" | "bancomat" | "altro" | "sconosciuto";
         /** @enum {string} */
-        Category: "alimentari" | "ristorazione" | "trasporti" | "carburante" | "salute" | "casa" | "abbigliamento" | "tecnologia" | "svago" | "servizi" | "altro";
+        Category: "alimentari" | "ristorazione" | "trasporti" | "carburante" | "salute" | "casa" | "abbigliamento" | "tecnologia" | "svago" | "servizi" | "igiene" | "altro";
         ReceiptItem: {
             /** Format: uuid */
             id: string;

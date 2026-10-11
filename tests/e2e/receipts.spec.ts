@@ -79,7 +79,7 @@ test("i filtri stanno nell'URL e sopravvivono al ricaricamento", async ({ page }
   await login(page, "/receipts");
   await expect(receiptItems(page)).toHaveCount(20);
 
-  await page.getByLabel("Categoria").selectOption("carburante");
+  await page.getByLabel("Categoria", { exact: true }).selectOption("carburante");
   await expect(page).toHaveURL(/category=carburante/);
   await expect(receiptItems(page)).toHaveCount(3);
   for (const item of await receiptItems(page).all()) {
@@ -90,7 +90,7 @@ test("i filtri stanno nell'URL e sopravvivono al ricaricamento", async ({ page }
   await expect(page).toHaveURL(/q=eni/);
 
   await page.reload();
-  await expect(page.getByLabel("Categoria")).toHaveValue("carburante");
+  await expect(page.getByLabel("Categoria", { exact: true })).toHaveValue("carburante");
   await expect(page.getByLabel("Cerca esercente")).toHaveValue("eni");
   await expect(receiptItems(page)).toHaveCount(3);
 

@@ -74,6 +74,8 @@ describe("normalizzazione dei prodotti", () => {
       [
         item("r1", "BANANE", 0.98, 0.296, 0.29),
         item("r1", "CETRIOLI 0,992 kg x 1,99 EUR/kg", 1.99, 1, 1.97),
+        // Importo già scontato dal modello: vale quello, non il prezzo al kg stampato.
+        item("r1", "PESCHE 1,000 kg x 2,00 EUR/kg", 2, 1, 1.6),
         item("r1", "Sconto Lidl Plus", -0.31),
         item("r1", "CASHBACK U!", -0.02),
         item("r1", "SACCHETTO ORTOFRUTTAR", 0.01),
@@ -87,6 +89,7 @@ describe("normalizzazione dei prodotti", () => {
     expect(purchases.map((p) => [p.key, p.unit, p.quantity, p.unitPrice])).toEqual([
       ["banane", "kg", 0.296, 0.98],
       ["cetrioli", "kg", 0.992, 1.99],
+      ["pesche", "kg", 1, 1.6],
       ["pane", "pz", 1, 2.3],
     ]);
     expect(purchases[0].measuredPrice).toEqual({ value: 0.98, unit: "kg" });

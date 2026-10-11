@@ -69,6 +69,11 @@ export const manualItemSchema = z.object({
     decimals: 2,
     messages: { invalid: e.numberInvalid, decimals: e.amountDecimals, range: e.vatRateRange },
   }),
+  // Vuota = la riga segue la categoria dello scontrino.
+  category: z
+    .union([z.enum(categories), z.literal("")])
+    .optional()
+    .transform((value) => value || undefined),
 });
 
 /**
@@ -116,6 +121,7 @@ export const emptyItem: ManualEntryValues["items"][number] = {
   unitPrice: "",
   amount: "",
   vatRate: "",
+  category: "",
 };
 
 /** Valori iniziali: data e ora di adesso (fuso di Roma), valuta EUR. */

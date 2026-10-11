@@ -94,7 +94,7 @@ test("dal tab Foto una foto entra nella coda come Foto", async ({ page }) => {
 test("inserimento manuale con righe e totale calcolato", async ({ page }) => {
   await openTab(page, "Manuale");
   await page.getByLabel("Esercente").fill("Panetteria Rossi");
-  await page.getByLabel("Categoria").selectOption("alimentari");
+  await page.getByLabel("Categoria", { exact: true }).selectOption("alimentari");
   await page.getByLabel("Metodo di pagamento").selectOption("bancomat");
   await page.getByRole("button", { name: "Aggiungi riga" }).click();
   const row = page.getByRole("group", { name: "Riga 1" });

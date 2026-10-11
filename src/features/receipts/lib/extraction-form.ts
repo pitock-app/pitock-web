@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { manualEntrySchema, manualItemSchema } from "@/features/manual-entry";
-import { categories, sizeUnits } from "@/lib/api/enums";
+import { sizeUnits } from "@/lib/api/enums";
 import type { components } from "@/lib/api/schema";
 import { formatAmountInput, toRomeLocalInput } from "@/lib/format";
 
@@ -19,18 +19,11 @@ const productSchema = z.object({
 
 /**
  * Form di correzione: gli stessi campi e la stessa validazione dell'inserimento manuale.
- * Le righe conservano categoria e prodotto normalizzato (non modificabili dal form) per non
- * perderli quando `items` sostituisce tutte le righe.
+ * Le righe conservano il prodotto normalizzato (non modificabile dal form) per non
+ * perderlo quando `items` sostituisce tutte le righe.
  */
 export const extractionFormSchema = manualEntrySchema.extend({
-  items: z
-    .array(
-      manualItemSchema.extend({
-        category: z.enum(categories).optional(),
-        product: productSchema.optional(),
-      }),
-    )
-    .max(500),
+  items: z.array(manualItemSchema.extend({ product: productSchema.optional() })).max(500),
 });
 
 export type ExtractionFormValues = z.input<typeof extractionFormSchema>;
@@ -64,7 +57,7 @@ export function extractionToFormValues(extraction: Extraction): ExtractionFormVa
       unitPrice: numberInput(item.unitPrice),
       amount: amountInput(item.amount),
       vatRate: numberInput(item.vatRate),
-      ...(item.category ? { category: item.category } : {}),
+      category: item.category ?? "",
       ...(item.normalizedName || item.brand || item.size
         ? {
             product: {

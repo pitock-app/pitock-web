@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState, type ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import { formatCurrency } from "@/lib/format";
@@ -7,6 +8,9 @@ import { it } from "@/lib/i18n/it";
 import { cn } from "@/lib/utils";
 
 const t = it.dashboard;
+
+const INTERACTIVE_ROW =
+  "hover:bg-muted/60 focus-visible:ring-ring/50 -mx-2 flex w-[calc(100%+1rem)] flex-col gap-1 rounded-lg px-2 py-1 outline-none focus-visible:ring-[3px]";
 
 /** Righe mostrate prima di "Mostra tutti". */
 export const RANKING_LIMIT = 10;
@@ -24,6 +28,8 @@ export type BarListRow = {
   color?: string;
   /** Colore del valore, per i soli stati (verde risparmio, rosso rincaro). */
   valueClassName?: string;
+  /** Rende la riga un link (es. allo scontrino dell'acquisto). */
+  href?: string;
 };
 
 type BarListProps = {
@@ -72,12 +78,12 @@ export function BarList({ rows, limit = RANKING_LIMIT, onSelect }: BarListProps)
           );
           return (
             <li key={row.key}>
-              {onSelect ? (
-                <button
-                  type="button"
-                  onClick={() => onSelect(row.key)}
-                  className="hover:bg-muted/60 focus-visible:ring-ring/50 -mx-2 flex w-[calc(100%+1rem)] flex-col gap-1 rounded-lg px-2 py-1 outline-none focus-visible:ring-[3px]"
-                >
+              {row.href ? (
+                <Link href={row.href} className={INTERACTIVE_ROW}>
+                  {content}
+                </Link>
+              ) : onSelect ? (
+                <button type="button" onClick={() => onSelect(row.key)} className={INTERACTIVE_ROW}>
                   {content}
                 </button>
               ) : (

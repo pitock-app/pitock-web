@@ -1,4 +1,4 @@
-import { fireEvent, screen } from "@testing-library/react";
+import { fireEvent, screen, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { ExtractionForm } from "@/features/receipts/ExtractionForm";
 import type { Extraction } from "@/features/receipts/lib/extraction-form";
@@ -64,5 +64,23 @@ describe("somma delle righe e totale", () => {
     // Il totale corretto a mano fa sparire l'avviso.
     fireEvent.change(screen.getByLabelText(/^Totale/), { target: { value: "14,00" } });
     expect(screen.queryByTestId("items-total-mismatch")).not.toBeInTheDocument();
+  });
+});
+
+describe("categoria delle righe", () => {
+  it("mostra la categoria estratta per ogni riga, vuota se segue lo scontrino", async () => {
+    renderWithQuery(
+      <ExtractionForm
+        extraction={{
+          ...extraction,
+          items: [{ ...item("1", "Detersivo", 3), category: "casa" }, item("2", "Pane", 7)],
+        }}
+      />,
+    );
+    const first = await screen.findByRole("group", { name: "Riga 1" });
+    const second = screen.getByRole("group", { name: "Riga 2" });
+    expect(within(first).getByLabelText("Categoria prodotto")).toHaveValue("casa");
+    expect(within(second).getByLabelText("Categoria prodotto")).toHaveValue("");
+    expect(within(second).getByRole("option", { name: "Come lo scontrino" })).toBeInTheDocument();
   });
 });

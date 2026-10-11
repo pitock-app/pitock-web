@@ -287,6 +287,7 @@ export const it = {
     tecnologia: "Tecnologia",
     svago: "Svago",
     servizi: "Servizi",
+    igiene: "Igiene personale",
     altro: "Altro",
   },
   paymentMethods: {
@@ -567,6 +568,8 @@ export const it = {
     addItem: "Aggiungi riga",
     removeItem: (index: number) => `Rimuovi la riga ${index}`,
     itemLabel: (index: number) => `Riga ${index}`,
+    itemCategory: "Categoria prodotto",
+    itemCategoryFromReceipt: "Come lo scontrino",
     description: "Descrizione",
     quantity: "Quantità",
     unitPrice: "Prezzo unitario",
@@ -826,10 +829,10 @@ export const it = {
       none: "Nessun prodotto comprato più di una volta nel periodo.",
     },
     categoryDrill: {
-      hint: "Scegli una categoria per vedere i prodotti che la compongono.",
+      hint: "Scegli una categoria per vedere i suoi acquisti.",
       back: "Tutte le categorie",
-      productsOf: (category: string) => `Prodotti in ${category}`,
-      none: "Nessuna riga prodotto in questa categoria.",
+      purchasesOf: (category: string) => `Acquisti in ${category}`,
+      none: "Nessun acquisto in questa categoria.",
     },
   },
   states: {

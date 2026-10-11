@@ -50,8 +50,10 @@ describe("ManualEntryForm", () => {
   it("le categorie e i metodi di pagamento vengono dal contratto", () => {
     renderWithQuery(<ManualEntryForm />);
     const categories = within(screen.getByLabelText("Categoria")).getAllByRole("option");
-    expect(categories).toHaveLength(12);
-    expect(categories.map((option) => option.getAttribute("value"))).toContain("carburante");
+    expect(categories).toHaveLength(13);
+    expect(categories.map((option) => option.getAttribute("value"))).toEqual(
+      expect.arrayContaining(["carburante", "igiene"]),
+    );
     const methods = within(screen.getByLabelText("Metodo di pagamento")).getAllByRole("option");
     expect(methods.map((option) => option.getAttribute("value"))).toEqual([
       "",

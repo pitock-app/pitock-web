@@ -146,16 +146,16 @@ export function toPurchases(receipts: ReceiptFact[], items: ItemFact[]): Purchas
 
     const weighed = WEIGHED.exec(item.description);
     let unit: Purchase["unit"] = "pz";
-    let unitPrice = item.unitPrice ?? amount / quantity;
     let bought = quantity;
     if (weighed) {
       unit = "kg";
       bought = toNumber(weighed[1]);
-      unitPrice = toNumber(weighed[2]);
     } else if (!Number.isInteger(quantity)) {
       // Quantità con decimali: prodotto pesato, il prezzo unitario è al kg.
       unit = "kg";
     }
+    // Dall'importo pagato, già al netto degli sconti: il prezzo stampato è quello pieno.
+    const unitPrice = round2(amount / bought);
     if (!(unitPrice > 0)) continue;
 
     const size =
@@ -172,7 +172,7 @@ export function toPurchases(receipts: ReceiptFact[], items: ItemFact[]): Purchas
       category: item.category,
       quantity: bought,
       amount: round2(amount),
-      unitPrice: round2(unitPrice),
+      unitPrice,
       unit,
       measuredPrice: size ? { value: unitPrice / size.value, unit: size.unit } : null,
     });

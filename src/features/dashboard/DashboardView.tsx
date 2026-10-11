@@ -315,7 +315,7 @@ export function DashboardView() {
             <CategoryPie
               rows={summary.byCategory}
               total={summary.totals.total}
-              products={products}
+              purchases={purchases}
             />
             <TopMerchants
               rows={summary.topMerchants}

@@ -16,6 +16,7 @@ export const categories = [
   "tecnologia",
   "svago",
   "servizi",
+  "igiene",
   "altro",
 ] as const;
 export const categoriesExact: Exact<(typeof categories)[number], Schemas["Category"]> = true;

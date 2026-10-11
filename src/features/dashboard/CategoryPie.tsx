@@ -4,28 +4,36 @@ import { ChevronLeft } from "lucide-react";
 import { useState } from "react";
 import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts";
 import { Button } from "@/components/ui/button";
-import { formatCurrency, formatNumber, formatShare } from "@/lib/format";
+import { formatCurrency, formatDate, formatNumber, formatShare } from "@/lib/format";
 import { it } from "@/lib/i18n/it";
 import { BarList } from "./BarList";
 import { ChartCard, DataTable, NoData, shareOf, tooltipStyle } from "./ChartCard";
 import { categoryColor } from "./lib/colors";
 import type { Summary } from "./lib/dataset";
-import type { Category, ProductStats } from "./lib/products";
+import type { Category, Purchase } from "./lib/products";
 
 const t = it.dashboard;
 
 type CategoryPieProps = {
   rows: Summary["byCategory"];
   total: number;
-  /** Prodotti del periodo: al clic su una categoria si vedono quelli che la compongono. */
-  products: ProductStats[];
+  /** Acquisti del periodo: al clic su una categoria si vedono quelli con la sua categoria di riga. */
+  purchases: Purchase[];
 };
+
+/** "2 pz", "0,296 kg"; nulla per il singolo pezzo. */
+function quantityLabel(p: Purchase) {
+  if (p.unit === "pz" && p.quantity === 1) return null;
+  return `${formatNumber(p.quantity, p.unit === "kg" ? 3 : 0)} ${p.unit}`;
+}
 
 /**
  * Ciambella della spesa per categoria. Ogni categoria ha sempre lo stesso colore; la legenda
- * riporta importi e quote e, al clic, apre il dettaglio dei prodotti della categoria.
+ * riporta importi e quote e, al clic, apre i singoli acquisti della categoria, dal più recente.
+ * Gli acquisti seguono la categoria della riga, quindi la loro somma può differire dalla
+ * fetta, che segue quella dello scontrino.
  */
-export function CategoryPie({ rows, total, products }: CategoryPieProps) {
+export function CategoryPie({ rows, total, purchases }: CategoryPieProps) {
   const [selected, setSelected] = useState<Category | null>(null);
   const slices = rows.map((row) => ({
     ...row,
@@ -33,14 +41,19 @@ export function CategoryPie({ rows, total, products }: CategoryPieProps) {
     color: categoryColor(row.category),
   }));
   const active = selected && rows.some((row) => row.category === selected) ? selected : null;
-  const categoryProducts = active ? products.filter((p) => p.category === active) : [];
+  const categoryPurchases = active
+    ? purchases
+        .filter((p) => p.category === active)
+        .sort((a, b) => b.day.localeCompare(a.day) || a.label.localeCompare(b.label))
+    : [];
+  const purchasesTotal = categoryPurchases.reduce((sum, p) => sum + p.amount, 0);
 
   return (
     <ChartCard
       id="by-category"
       title={t.byCategoryTitle}
       description={
-        active ? t.categoryDrill.productsOf(it.categories[active]) : t.byCategoryDescription
+        active ? t.categoryDrill.purchasesOf(it.categories[active]) : t.byCategoryDescription
       }
       table={
         rows.length > 0 && (
@@ -73,18 +86,29 @@ export function CategoryPie({ rows, total, products }: CategoryPieProps) {
             <ChevronLeft aria-hidden />
             {t.categoryDrill.back}
           </Button>
-          {categoryProducts.length === 0 ? (
+          {categoryPurchases.length === 0 ? (
             <NoData>{t.categoryDrill.none}</NoData>
           ) : (
-            <BarList
-              rows={categoryProducts.map((p) => ({
-                key: p.key,
-                label: p.label,
-                value: p.totalSpent,
-                color: categoryColor(active),
-                detail: t.purchases(p.purchases),
-              }))}
-            />
+            <>
+              <p
+                className="text-muted-foreground text-sm tabular-nums"
+                data-testid="category-purchases-total"
+              >
+                {t.purchases(categoryPurchases.length)} · {formatCurrency(purchasesTotal)}
+              </p>
+              <BarList
+                rows={categoryPurchases.map((p, index) => ({
+                  key: `${p.receiptId}-${index}`,
+                  label: p.label,
+                  value: p.amount,
+                  color: categoryColor(active),
+                  href: `/receipts/${p.receiptId}`,
+                  detail: [formatDate(p.day), p.merchant, quantityLabel(p)]
+                    .filter(Boolean)
+                    .join(" · "),
+                }))}
+              />
+            </>
           )}
         </div>
       ) : (

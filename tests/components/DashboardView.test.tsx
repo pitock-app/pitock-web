@@ -187,14 +187,20 @@ describe("DashboardView", () => {
     expect(screen.getByTestId("forecast-indicative")).toHaveTextContent("Stima indicativa");
   });
 
-  it("al clic su una categoria mostra i prodotti che la compongono", async () => {
+  it("al clic su una categoria mostra i suoi acquisti con il link allo scontrino", async () => {
     const user = userEvent.setup();
     mockDataset({ current: dataset });
     renderWithQuery(<DashboardView />);
     const legend = await screen.findByTestId("category-legend");
     await user.click(within(legend).getByRole("button", { name: /Casa/ }));
     const card = screen.getByRole("region", { name: "Per categoria" });
-    expect(within(card).getByText("Detersivo piatti")).toBeInTheDocument();
+    const purchase = within(card).getByRole("link", { name: /Detersivo piatti/ });
+    expect(purchase).toHaveAttribute("href", "/receipts/r4");
+    expect(purchase).toHaveTextContent("20 set 2026");
+    expect(purchase).toHaveTextContent("Esselunga");
+    expect(within(card).getByTestId("category-purchases-total")).toHaveTextContent(
+      `1 acquisto · ${money(2.5)}`,
+    );
     await user.click(within(card).getByRole("button", { name: "Tutte le categorie" }));
     expect(within(card).getByTestId("category-legend")).toBeInTheDocument();
   });

@@ -43,7 +43,7 @@ test("inserimento, correzione, lista, dashboard, impostazioni ed eliminazione", 
   await page.getByRole("tab", { name: "Manuale" }).click();
   await page.getByLabel("Esercente").fill(merchant);
   await page.getByLabel("Totale", { exact: true }).fill("12,34");
-  await page.getByLabel("Categoria").selectOption("alimentari");
+  await page.getByLabel("Categoria", { exact: true }).selectOption("alimentari");
   await page.getByLabel("Metodo di pagamento").selectOption("bancomat");
   await page.getByRole("button", { name: "Salva scontrino" }).click();
   await page.getByRole("link", { name: "Apri scontrino" }).click();

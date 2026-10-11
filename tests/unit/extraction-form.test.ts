@@ -93,6 +93,18 @@ describe("form di correzione dell'estrazione", () => {
     });
   });
 
+  it("invia la categoria di riga scelta a mano e la omette se segue lo scontrino", () => {
+    const values = extractionToFormValues(extraction);
+    values.items[0].category = "trasporti";
+    expect(toExtractionPatch(extractionFormSchema.parse(values)).items?.[0]).toMatchObject({
+      category: "trasporti",
+    });
+    values.items[0].category = "";
+    expect(toExtractionPatch(extractionFormSchema.parse(values)).items?.[0]).not.toHaveProperty(
+      "category",
+    );
+  });
+
   it("chiede di scegliere categoria e pagamento se l'estrazione non li ha", () => {
     const result = extractionFormSchema.safeParse(
       extractionToFormValues({ ...extraction, category: null, paymentMethod: null, total: null }),
