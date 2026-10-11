@@ -1,6 +1,6 @@
 import { avoidabilities } from "@/lib/api/enums";
 import type { CategoryLine } from "./dataset";
-import type { Avoidability, Category } from "./products";
+import type { Avoidability } from "./products";
 
 /** Livelli in ordine, dal meno al più evitabile, più le voci non ancora classificate. */
 export type AvoidabilityBucket = Avoidability | "unclassified";
@@ -79,53 +79,16 @@ export function avoidabilityByPeriod(
   return periods.map((period) => ({ period, ...finish(byPeriod.get(period) ?? empty()) }));
 }
 
-/** Indice di ogni categoria con spesa classificata, dalla più evitabile. */
-export function avoidabilityByCategory(lines: CategoryLine[]) {
-  const byCategory = new Map<Category, Amounts>();
-  for (const line of lines) {
-    const amounts = byCategory.get(line.category) ?? empty();
-    add(amounts, line);
-    byCategory.set(line.category, amounts);
-  }
-  return [...byCategory]
-    .map(([category, amounts]) => ({ category, ...finish(amounts) }))
-    .filter((row): row is typeof row & { index: number } => row.index !== null)
-    .sort((a, b) => b.index - a.index || b.avoidable - a.avoidable);
-}
-
 /**
- * Prodotti superflui del periodo, raggruppati per nome, dal più costoso. Ogni voce porta lo
- * scontrino più recente in cui compare.
+ * Voci di un livello, dalla più costosa: quelle di un solo periodo (`YYYY-MM` o `YYYY`) se
+ * indicato. La loro somma è il segmento del grafico da cui si arriva.
  */
-export function topSuperfluous(lines: CategoryLine[]) {
-  const byKey = new Map<
-    string,
-    { key: string; label: string; total: number; count: number; day: string; receiptId: string }
-  >();
-  for (const line of lines) {
-    if (line.avoidability !== "superfluo" || line.kind !== "item" || !line.label) continue;
-    if (line.amount <= 0) continue;
-    const key = line.label.toLowerCase();
-    const previous = byKey.get(key);
-    if (!previous) {
-      byKey.set(key, {
-        key,
-        label: line.label,
-        total: line.amount,
-        count: 1,
-        day: line.day,
-        receiptId: line.receiptId,
-      });
-      continue;
-    }
-    previous.total += line.amount;
-    previous.count += 1;
-    if (line.day > previous.day) {
-      previous.day = line.day;
-      previous.receiptId = line.receiptId;
-    }
-  }
-  return [...byKey.values()]
-    .map((row) => ({ ...row, total: round2(row.total) }))
-    .sort((a, b) => b.total - a.total || a.label.localeCompare(b.label));
+export function avoidabilityLines(
+  lines: CategoryLine[],
+  bucket: AvoidabilityBucket,
+  period: string | null = null,
+) {
+  return lines
+    .filter((line) => bucketOf(line) === bucket && (!period || line.day.startsWith(period)))
+    .sort((a, b) => b.amount - a.amount || b.day.localeCompare(a.day));
 }

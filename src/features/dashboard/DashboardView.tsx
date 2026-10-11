@@ -13,12 +13,7 @@ import { it } from "@/lib/i18n/it";
 import { lastDay, shiftMonth, ymd } from "@/lib/period";
 import { routes } from "@/lib/routes";
 import { cn } from "@/lib/utils";
-import {
-  AvoidabilityByCategory,
-  AvoidabilityByPeriod,
-  AvoidabilityOverview,
-  TopSuperfluous,
-} from "./AvoidabilityCharts";
+import { AvoidabilityByPeriod, AvoidabilityOverview } from "./AvoidabilityCharts";
 import { CategoryPie } from "./CategoryPie";
 import { DashboardSection } from "./DashboardSection";
 import { DimensionFilters } from "./DimensionFilters";
@@ -340,15 +335,12 @@ export function DashboardView() {
           description={t.sections.avoidabilityDescription}
         >
           <div className="grid gap-4 lg:grid-cols-2">
-            <AvoidabilityOverview totals={avoidability} />
-            <AvoidabilityByCategory lines={lines} />
+            <AvoidabilityOverview totals={avoidability} lines={lines} />
             <AvoidabilityByPeriod
               lines={lines}
               granularity={summary.granularity}
               keys={dataset.isPlaceholderData ? null : keys}
-              className="lg:col-span-2"
             />
-            <TopSuperfluous lines={lines} className="lg:col-span-2" />
           </div>
         </DashboardSection>
 

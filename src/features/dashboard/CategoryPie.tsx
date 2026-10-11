@@ -1,13 +1,11 @@
 "use client";
 
-import { ChevronLeft } from "lucide-react";
 import { useState } from "react";
 import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts";
-import { Button } from "@/components/ui/button";
-import { formatCurrency, formatDate, formatNumber, formatShare } from "@/lib/format";
+import { formatCurrency, formatNumber, formatShare } from "@/lib/format";
 import { it } from "@/lib/i18n/it";
-import { BarList } from "./BarList";
 import { ChartCard, DataTable, NoData, shareOf, tooltipStyle } from "./ChartCard";
+import { LineDrill } from "./LineDrill";
 import { categoryColor } from "./lib/colors";
 import type { CategoryLine, Summary } from "./lib/dataset";
 import type { Category } from "./lib/products";
@@ -20,21 +18,6 @@ type CategoryPieProps = {
   /** Voci di spesa del periodo, dal più recente: al clic su una categoria si vedono le sue. */
   lines: CategoryLine[];
 };
-
-/** "× 2", "× 0,296"; nulla per il singolo pezzo. */
-function quantityLabel(line: CategoryLine) {
-  if (line.quantity === null || line.quantity === 1) return null;
-  return `× ${formatNumber(line.quantity, Number.isInteger(line.quantity) ? 0 : 3)}`;
-}
-
-function lineLabel(line: CategoryLine) {
-  if (line.kind === "item") return line.label ?? "";
-  return line.kind === "rest"
-    ? line.amount < 0
-      ? t.categoryDrill.discounts
-      : t.categoryDrill.rest
-    : t.categoryDrill.wholeReceipt;
-}
 
 /**
  * Ciambella della spesa per categoria. Ogni categoria ha sempre lo stesso colore; la legenda
@@ -52,7 +35,6 @@ export function CategoryPie({ rows, total, lines }: CategoryPieProps) {
   const pieSlices = slices.filter((slice) => slice.total > 0);
   const active = selected && rows.some((row) => row.category === selected) ? selected : null;
   const categoryLines = active ? lines.filter((line) => line.category === active) : [];
-  const linesTotal = categoryLines.reduce((sum, line) => sum + line.amount, 0);
 
   return (
     <ChartCard
@@ -82,41 +64,13 @@ export function CategoryPie({ rows, total, lines }: CategoryPieProps) {
       {slices.length === 0 ? (
         <NoData>{t.noData}</NoData>
       ) : active ? (
-        <div className="flex flex-col gap-3">
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-11 self-start"
-            onClick={() => setSelected(null)}
-          >
-            <ChevronLeft aria-hidden />
-            {t.categoryDrill.back}
-          </Button>
-          {categoryLines.length === 0 ? (
-            <NoData>{t.categoryDrill.none}</NoData>
-          ) : (
-            <>
-              <p
-                className="text-muted-foreground text-sm tabular-nums"
-                data-testid="category-purchases-total"
-              >
-                {t.categoryDrill.lines(categoryLines.length)} · {formatCurrency(linesTotal)}
-              </p>
-              <BarList
-                rows={categoryLines.map((line) => ({
-                  key: line.key,
-                  label: lineLabel(line),
-                  value: line.amount,
-                  color: categoryColor(active),
-                  href: `/receipts/${line.receiptId}`,
-                  detail: [formatDate(line.day), line.merchant, quantityLabel(line)]
-                    .filter(Boolean)
-                    .join(" · "),
-                }))}
-              />
-            </>
-          )}
-        </div>
+        <LineDrill
+          lines={categoryLines}
+          color={categoryColor(active)}
+          backLabel={t.categoryDrill.back}
+          onBack={() => setSelected(null)}
+          testId="category-purchases-total"
+        />
       ) : (
         <div className="flex flex-col items-center gap-4 sm:flex-row">
           <div className="size-44 shrink-0" aria-hidden>

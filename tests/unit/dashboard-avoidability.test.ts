@@ -1,9 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
-  avoidabilityByCategory,
+  avoidabilityLines,
   avoidabilityByPeriod,
   avoidabilitySummary,
-  topSuperfluous,
 } from "@/features/dashboard/lib/avoidability";
 import { categoryLines, receiptAmounts } from "@/features/dashboard/lib/dataset";
 import type { ItemFact, ReceiptFact } from "@/features/dashboard/lib/products";
@@ -88,21 +87,15 @@ describe("indice di evitabilità", () => {
     expect(rows[0]?.index).toBeNull();
   });
 
-  it("ordina le categorie dalla più evitabile, senza quelle non classificate", () => {
-    expect(avoidabilityByCategory(lines).map((r) => [r.category, Math.round(r.index)])).toEqual([
-      ["ristorazione", 100],
-      ["alimentari", 64],
-      ["servizi", 0],
-    ]);
-  });
-
-  it("elenca i prodotti superflui per spesa, con lo scontrino più recente", () => {
-    const more = [...items, item("e", "PATATINE", 3, "superfluo")];
-    const all = [...receipts, receipt("e", "2026-10-08T09:00:00Z", 3, "superfluo")];
-    const top = topSuperfluous(categoryLines(all, more, receiptAmounts(all, more)));
-    expect(top.map((r) => [r.label, r.total, r.count, r.receiptId])).toEqual([
-      ["Pizza", 30, 1, "c"],
-      ["Patatine", 7, 2, "e"],
-    ]);
+  it("elenca le voci di un livello dalla più costosa, anche per un solo periodo", () => {
+    const superfluous = avoidabilityLines(lines, "superfluo");
+    expect(superfluous.map((l) => l.amount)).toEqual([30, 4]);
+    expect(avoidabilityLines(lines, "superfluo", "2026-10").map((l) => l.amount)).toEqual([4]);
+    const sum = (bucket: Parameters<typeof avoidabilityLines>[1]) =>
+      avoidabilityLines(lines, bucket).reduce((total, l) => total + l.amount, 0);
+    const summary = avoidabilitySummary(lines);
+    for (const bucket of ["essenziale", "utile", "superfluo", "unclassified"] as const) {
+      expect(sum(bucket)).toBeCloseTo(summary.amounts[bucket], 2);
+    }
   });
 });

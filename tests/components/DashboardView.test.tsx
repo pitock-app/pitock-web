@@ -253,7 +253,8 @@ describe("DashboardView", () => {
     expect(await screen.findByTestId("dashboard-kpi-total")).toHaveTextContent(money(2.5));
   });
 
-  it("mostra l'indice di evitabilità e i prodotti superflui", async () => {
+  it("mostra l'indice di evitabilità e, al clic su un livello, i suoi acquisti", async () => {
+    const user = userEvent.setup();
     // r3 (carburante, 60 €) essenziale; detersivo utile; r1 superfluo; il resto non classificato.
     const classified: Dataset = {
       ...dataset,
@@ -273,12 +274,20 @@ describe("DashboardView", () => {
     // Classificati: 60 essenziale, 2,50 utile, 20 superfluo → (1,25 + 20) / 82,50 = 26.
     expect(await screen.findByTestId("avoidability-index")).toHaveTextContent("26");
     expect(screen.getByTestId("avoidability-avoidable")).toHaveTextContent(money(21.25));
-    const top = screen.getByRole("region", { name: "Acquisti superflui" });
-    expect(within(top).getByRole("link", { name: /Latte intero 1L/ })).toHaveAttribute(
+    expect(screen.getByText(/di spesa non ancora classificata/)).toBeInTheDocument();
+    const card = screen.getByRole("region", { name: "Indice di evitabilità" });
+    await user.click(within(card).getByRole("button", { name: /Superfluo/ }));
+    expect(within(card).getByTestId("avoidability-purchases-total")).toHaveTextContent(money(20));
+    expect(within(card).getByRole("link", { name: /Latte intero 1L/ })).toHaveAttribute(
       "href",
       "/receipts/r1",
     );
-    expect(screen.getByText(/di spesa non ancora classificata/)).toBeInTheDocument();
+    await user.click(within(card).getByRole("button", { name: "Tutti i livelli" }));
+    expect(within(card).getByTestId("avoidability-index")).toBeInTheDocument();
+
+    const byPeriod = screen.getByRole("region", { name: /Evitabilità per/ });
+    await user.click(within(byPeriod).getByRole("button", { name: /Utile/ }));
+    expect(within(byPeriod).getByRole("link", { name: /Detersivo/i })).toBeInTheDocument();
   });
 
   it("senza scontrini per i filtri lo dice e permette di toglierli", async () => {
