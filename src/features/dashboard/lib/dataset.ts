@@ -1,12 +1,7 @@
 import type { components } from "@/lib/api/schema";
 import { toRomeDateInput } from "@/lib/format";
-import {
-  productLabel,
-  type Avoidability,
-  type Category,
-  type ItemFact,
-  type ReceiptFact,
-} from "./products";
+import { productLabel } from "./product-text";
+import type { Avoidability, Category, ItemFact, ReceiptFact } from "./products";
 
 type Schemas = components["schemas"];
 export type Dataset = Schemas["StatsDataset"];

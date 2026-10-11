@@ -7,14 +7,14 @@ import {
 } from "@/features/dashboard/lib/dataset";
 import {
   formatComparison,
-  packSize,
   priceChanges,
-  productKey,
-  productLabel,
-  productStats,
   savingsRanking,
   savingTips,
   storeComparison,
+} from "@/features/dashboard/lib/product-insights";
+import { packSize, productKey, productLabel } from "@/features/dashboard/lib/product-text";
+import {
+  productStats,
   toPurchases,
   type ItemFact,
   type ReceiptFact,

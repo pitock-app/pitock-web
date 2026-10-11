@@ -14,7 +14,8 @@ import { Input } from "@/components/ui/input";
 import { formatCompactCurrency, formatDate, formatShortDay } from "@/lib/format";
 import { it } from "@/lib/i18n/it";
 import { axisTick, ChartCard, DataTable, NoData, tooltipStyle } from "./ChartCard";
-import { priceHistory, type ProductStats, type Purchase } from "./lib/products";
+import { priceHistory } from "./lib/product-insights";
+import type { ProductStats, Purchase } from "./lib/products";
 import { formatUnitPrice } from "./ProductRankings";
 
 const t = it.dashboard;

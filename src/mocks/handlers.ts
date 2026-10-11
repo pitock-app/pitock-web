@@ -426,9 +426,18 @@ export const handlers = [
     if (!email) return unauthorized();
     const params = new URL(request.url).searchParams;
     params.delete("granularity");
+    const cursor = params.get("cursor") ?? undefined;
+    const limit = params.has("limit") ? Number(params.get("limit")) : undefined;
+    params.delete("cursor");
+    params.delete("limit");
     const query = parseStatsQuery(params);
     if (!query) return validationError("Intervallo di date non valido");
-    return HttpResponse.json<Schemas["StatsDataset"]>(mockStatsDataset(email, query));
+    const page = mockStatsDataset(email, query, {
+      ...(cursor !== undefined ? { cursor } : {}),
+      ...(limit !== undefined ? { limit } : {}),
+    });
+    if (!page) return validationError("Cursore o limite non valido");
+    return HttpResponse.json<Schemas["StatsDataset"]>(page);
   }),
 
   http.get(`${API}/usage/calls`, ({ request }) => {

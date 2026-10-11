@@ -58,7 +58,7 @@ const collisionDetection: CollisionDetection = (args) => {
   return hits.length > 0 ? hits : closestCenter(args);
 };
 
-function SortableCard({ id, children }: { id: string; children: ReactNode }) {
+function SortableCard({ id, wide, children }: { id: string; wide?: boolean; children: ReactNode }) {
   const { layout, toggleCollapsed } = useDashboardLayout();
   const {
     attributes,
@@ -76,6 +76,7 @@ function SortableCard({ id, children }: { id: string; children: ReactNode }) {
       data-card-id={id}
       className={cn(
         "min-w-0 [&>section]:h-full",
+        wide && "lg:col-span-2",
         // Chiusa non si allunga all'altezza della card accanto.
         collapsed && "self-start",
         isDragging && "relative z-10",
@@ -119,7 +120,7 @@ type SortableCardsProps = {
   /** Sezione della dashboard: l'ordine si salva per sezione. */
   section: string;
   /** Card nell'ordine di default; `id` è lo stesso della ChartCard. */
-  cards: { id: string; node: ReactNode }[];
+  cards: { id: string; node: ReactNode; /** Occupa tutta la riga su desktop. */ wide?: boolean }[];
   className?: string;
 };
 
@@ -134,7 +135,7 @@ export function SortableCards({ section, cards, className }: SortableCardsProps)
     cards.map((card) => card.id),
     layout.order[section],
   );
-  const byId = new Map(cards.map((card) => [card.id, card.node]));
+  const byId = new Map(cards.map((card) => [card.id, card]));
   const sensors = useSensors(
     // La maniglia ha touch-action: none, quindi lo stesso sensore vale anche al tocco.
     useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
@@ -167,8 +168,8 @@ export function SortableCards({ section, cards, className }: SortableCardsProps)
       <SortableContext items={ids} strategy={rectSortingStrategy}>
         <div className={cn("grid gap-4 lg:grid-cols-2", className)}>
           {ids.map((id) => (
-            <SortableCard key={id} id={id}>
-              {byId.get(id)}
+            <SortableCard key={id} id={id} wide={byId.get(id)?.wide}>
+              {byId.get(id)?.node}
             </SortableCard>
           ))}
         </div>

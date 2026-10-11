@@ -1,28 +1,14 @@
 "use client";
 
-import {
-  Camera,
-  Check,
-  ImageUp,
-  Layers,
-  Plus,
-  RefreshCw,
-  RotateCw,
-  VideoOff,
-  X,
-} from "lucide-react";
-import {
-  type ChangeEvent,
-  useCallback,
-  useEffect,
-  useRef,
-  useState,
-  useSyncExternalStore,
-} from "react";
+import { Camera, ImageUp, VideoOff } from "lucide-react";
+import { type ChangeEvent, useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { it } from "@/lib/i18n/it";
+import { hasWebcamApi, useIsTouchDevice } from "./lib/device";
 import { isPdf } from "./lib/file-types";
+import { PhotoReview, PRIMARY_CLASS } from "./PhotoReview";
+import { PiecesStrip } from "./PiecesStrip";
 import { validateFiles } from "./lib/validate-files";
 import { captureVideoFrame, photoFileName, rotateImage90, stitchVertical } from "./lib/image-tools";
 import { useUploadQueue } from "./store/upload-queue.store";
@@ -31,29 +17,6 @@ const t = it.capture.camera;
 
 type Photo = { file: File; url: string; capturedAt?: string };
 type WebcamState = "idle" | "starting" | "live" | "unavailable";
-
-const COARSE_POINTER = "(pointer: coarse)";
-
-function subscribePointer(onChange: () => void) {
-  const query = window.matchMedia(COARSE_POINTER);
-  query.addEventListener("change", onChange);
-  return () => query.removeEventListener("change", onChange);
-}
-
-/** true su dispositivi touch: lì si usa la fotocamera di sistema. */
-function useIsTouchDevice() {
-  return useSyncExternalStore(
-    subscribePointer,
-    () => window.matchMedia(COARSE_POINTER).matches,
-    () => false,
-  );
-}
-
-function hasWebcamApi() {
-  return typeof navigator !== "undefined" && !!navigator.mediaDevices?.getUserMedia;
-}
-
-const primaryClass = "bg-brand text-brand-foreground hover:bg-brand/90";
 
 /** Tab Foto: fotocamera posteriore su mobile, webcam su desktop, file come ripiego. */
 export function CameraCapture() {
@@ -199,48 +162,14 @@ export function CameraCapture() {
     discardPieces();
   }
 
-  const piecesStrip = pieces.length > 0 && (
-    <section
-      aria-label={t.pieces(pieces.length)}
-      className="bg-muted/50 flex w-full max-w-2xl flex-col gap-3 rounded-xl border p-3 text-left"
-    >
-      <div className="flex items-center gap-2 text-sm font-medium">
-        <Layers className="size-4" aria-hidden />
-        {t.pieces(pieces.length)}
-      </div>
-      <ol className="flex gap-2 overflow-x-auto">
-        {pieces.map((piece, index) => (
-          <li key={piece.url} className="shrink-0">
-            {/* eslint-disable-next-line @next/next/no-img-element -- anteprima locale (blob:) */}
-            <img
-              src={piece.url}
-              alt={t.piece(index + 1)}
-              className="bg-background h-24 w-auto rounded-md border object-contain"
-            />
-          </li>
-        ))}
-      </ol>
-      {!photo && (
-        <>
-          <p className="text-muted-foreground text-sm">{t.piecesHint}</p>
-          <div className="flex flex-wrap gap-2">
-            <Button
-              type="button"
-              className={`h-11 ${primaryClass}`}
-              onClick={() => void confirm()}
-              disabled={stitching}
-            >
-              <Check aria-hidden />
-              {stitching ? t.stitching : pieces.length === 1 ? t.use : t.useStitched(pieces.length)}
-            </Button>
-            <Button type="button" variant="outline" className="h-11" onClick={discardPieces}>
-              <X aria-hidden />
-              {t.discardPieces}
-            </Button>
-          </div>
-        </>
-      )}
-    </section>
+  const piecesStrip = (
+    <PiecesStrip
+      pieces={pieces}
+      showActions={!photo}
+      stitching={stitching}
+      onConfirm={() => void confirm()}
+      onDiscard={discardPieces}
+    />
   );
 
   const fileFallback = (
@@ -268,52 +197,18 @@ export function CameraCapture() {
 
   if (photo) {
     return (
-      <div className="flex flex-col items-center gap-4">
-        {/* eslint-disable-next-line @next/next/no-img-element -- anteprima locale (blob:) */}
-        <img
-          src={photo.url}
-          alt={t.preview}
-          className="bg-muted max-h-[60vh] w-auto max-w-full rounded-xl border object-contain"
-        />
-        {piecesStrip}
-        <div className="flex w-full flex-wrap justify-center gap-2">
-          <Button
-            type="button"
-            variant="outline"
-            className="h-11"
-            onClick={rotate}
-            disabled={rotating}
-          >
-            <RotateCw aria-hidden />
-            {t.rotate}
-          </Button>
-          <Button type="button" variant="outline" className="h-11" onClick={() => setPhoto(null)}>
-            <RefreshCw aria-hidden />
-            {t.retake}
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            className="h-11"
-            onClick={addPiece}
-            disabled={rotating || stitching}
-          >
-            <Plus aria-hidden />
-            {t.addPiece}
-          </Button>
-          <Button
-            ref={primaryRef}
-            type="button"
-            className={`h-11 px-5 ${primaryClass}`}
-            onClick={() => void confirm()}
-            disabled={rotating || stitching}
-          >
-            <Check aria-hidden />
-            {stitching ? t.stitching : pieces.length > 0 ? t.useStitched(pieces.length + 1) : t.use}
-          </Button>
-        </div>
-        <p className="text-muted-foreground max-w-md text-center text-xs">{t.addPieceHint}</p>
-      </div>
+      <PhotoReview
+        url={photo.url}
+        piecesStrip={piecesStrip}
+        piecesCount={pieces.length}
+        rotating={rotating}
+        stitching={stitching}
+        primaryRef={primaryRef}
+        onRotate={() => void rotate()}
+        onRetake={() => setPhoto(null)}
+        onAddPiece={addPiece}
+        onConfirm={() => void confirm()}
+      />
     );
   }
 
@@ -334,7 +229,7 @@ export function CameraCapture() {
         <Button
           ref={primaryRef}
           type="button"
-          className={`h-16 w-full max-w-xs gap-2 rounded-2xl text-lg ${primaryClass}`}
+          className={`h-16 w-full max-w-xs gap-2 rounded-2xl text-lg ${PRIMARY_CLASS}`}
           onClick={() => cameraInputRef.current?.click()}
         >
           <Camera className="size-6" aria-hidden />
@@ -366,7 +261,7 @@ export function CameraCapture() {
             <Button
               ref={primaryRef}
               type="button"
-              className={`h-11 px-6 ${primaryClass}`}
+              className={`h-11 px-6 ${PRIMARY_CLASS}`}
               onClick={shoot}
             >
               <Camera aria-hidden />
@@ -393,7 +288,7 @@ export function CameraCapture() {
               <Button
                 ref={primaryRef}
                 type="button"
-                className={`h-11 px-5 ${primaryClass}`}
+                className={`h-11 px-5 ${PRIMARY_CLASS}`}
                 onClick={startWebcam}
                 disabled={webcam === "starting"}
               >

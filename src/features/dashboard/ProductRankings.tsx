@@ -9,7 +9,8 @@ import { it } from "@/lib/i18n/it";
 import { BarList } from "./BarList";
 import { ChartCard, DataTable, NoData } from "./ChartCard";
 import { categoryColor, INCREASE, SAVING } from "./lib/colors";
-import { priceChanges, savingsRanking, type ProductStats } from "./lib/products";
+import { priceChanges, savingsRanking } from "./lib/product-insights";
+import type { ProductStats } from "./lib/products";
 
 const t = it.dashboard;
 

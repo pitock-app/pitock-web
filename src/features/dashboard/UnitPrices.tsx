@@ -2,7 +2,8 @@ import { Check } from "lucide-react";
 import { it } from "@/lib/i18n/it";
 import { ChartCard, DataTable, NoData } from "./ChartCard";
 import { SAVING } from "./lib/colors";
-import { formatComparison, type ProductStats } from "./lib/products";
+import { formatComparison } from "./lib/product-insights";
+import type { ProductStats } from "./lib/products";
 import { formatGap, formatUnitPrice } from "./ProductRankings";
 
 const t = it.dashboard;

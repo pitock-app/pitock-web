@@ -1884,6 +1884,10 @@ export interface paths {
                     from?: string;
                     /** @description Incluso; con la sola data comprende l'intera giornata. Default: nessun limite */
                     to?: string;
+                    /** @description `nextCursor` della pagina precedente; assente per la prima pagina */
+                    cursor?: string;
+                    /** @description Scontrini per pagina, con tutte le loro righe prodotto */
+                    limit?: number;
                 };
                 header?: never;
                 path?: never;
@@ -2056,7 +2060,7 @@ export interface components {
             /** Format: date-time */
             capturedAt: string | null;
             /**
-             * @description Motivo del fallimento quando status=failed. Valori attuali: NOT_A_RECEIPT, INVALID_OUTPUT, UNSUPPORTED_FILE_TYPE, USER_KEY_MISSING, USER_KEY_INVALID, USER_KEY_QUOTA, PLATFORM_QUOTA_EXCEEDED, AI_NOT_CONFIGURED, LLM_UNAVAILABLE, FILE_UNAVAILABLE, INTERNAL.
+             * @description Motivo del fallimento quando status=failed. Valori attuali: NOT_A_RECEIPT, INVALID_OUTPUT, UNSUPPORTED_FILE_TYPE, USER_KEY_MISSING, USER_KEY_INVALID, USER_KEY_QUOTA, PLATFORM_QUOTA_EXCEEDED, AI_NOT_CONFIGURED, LLM_UNAVAILABLE, TIMEOUT, FILE_UNAVAILABLE, INTERNAL.
              * @example NOT_A_RECEIPT
              */
             errorCode: string | null;
@@ -2392,7 +2396,7 @@ export interface components {
             /** @description Totale medio per scontrino, 2 decimali */
             average: number;
         };
-        /** @description Scontrini e righe prodotto del periodo (estrazioni correnti degli scontrini estratti), dal più recente */
+        /** @description Una pagina di scontrini del periodo (estrazioni correnti degli scontrini estratti), dal più recente, con tutte le loro righe prodotto */
         StatsDataset: {
             /** Format: date-time */
             from: string | null;
@@ -2401,8 +2405,10 @@ export interface components {
              * @description Limite superiore esclusivo, già normalizzato come in /v1/stats
              */
             to: string | null;
-            /** @description Vero se uno dei due elenchi supera il limite ed è stato tagliato ai più recenti */
+            /** @description Vero se ci sono altri scontrini oltre questa pagina (equivale a `nextCursor` non null) */
             truncated: boolean;
+            /** @description Da passare come `cursor` per la pagina successiva; null all'ultima pagina. Le pagine vanno dal più recente al più vecchio */
+            nextCursor: string | null;
             receipts: components["schemas"]["StatsReceiptFact"][];
             items: components["schemas"]["StatsItemFact"][];
         };

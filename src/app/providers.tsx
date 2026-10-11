@@ -35,12 +35,25 @@ function ThemedToaster() {
   );
 }
 
-export function Providers({ children }: { children: ReactNode }) {
+/** `nonce`: quello della CSP della richiesta, per lo script inline di next-themes. */
+export function Providers({
+  children,
+  nonce,
+}: {
+  children: ReactNode;
+  nonce?: string | undefined;
+}) {
   const [queryClient] = useState(createQueryClient);
 
   return (
     <QueryClientProvider client={queryClient}>
-      <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
+      <ThemeProvider
+        attribute="class"
+        defaultTheme="system"
+        enableSystem
+        disableTransitionOnChange
+        nonce={nonce}
+      >
         {children}
         <ThemedToaster />
       </ThemeProvider>

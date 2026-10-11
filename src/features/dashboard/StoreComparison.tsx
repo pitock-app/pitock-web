@@ -7,7 +7,8 @@ import { it } from "@/lib/i18n/it";
 import { RANKING_LIMIT } from "./BarList";
 import { ChartCard, DataTable, NoData } from "./ChartCard";
 import { SAVING } from "./lib/colors";
-import { storeComparison, type ProductStats } from "./lib/products";
+import { storeComparison } from "./lib/product-insights";
+import type { ProductStats } from "./lib/products";
 import { formatGap, formatUnitPrice } from "./ProductRankings";
 
 const t = it.dashboard;

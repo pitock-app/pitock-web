@@ -100,14 +100,31 @@ export function summarizeMockStats(owner: string, query: StatsQuery): Stats {
   };
 }
 
-/** Massimo di scontrini e di righe di `/v1/stats/dataset`, come `DATASET_LIMIT` del backend. */
-export const DATASET_LIMIT = 5000;
+/** Scontrini per pagina di `/v1/stats/dataset`, come il backend: 500 di default, massimo 1000. */
+export const DATASET_PAGE_DEFAULT = 500;
+export const DATASET_PAGE_MAX = 1000;
+
+/** Cursore finto: base64url della posizione del prossimo scontrino (il backend usa data e id). */
+const encodeOffset = (offset: number) => btoa(String(offset));
+function decodeOffset(cursor: string): number | null {
+  try {
+    const offset = Number(atob(cursor));
+    return Number.isInteger(offset) && offset >= 0 ? offset : null;
+  } catch {
+    return null;
+  }
+}
 
 /** Come `stats.service.dataset` del backend: scontrini e righe del periodo, dal più recente. */
 export function mockStatsDataset(
   owner: string,
   query: Omit<StatsQuery, "granularity">,
-): Schemas["StatsDataset"] {
+  page: { cursor?: string; limit?: number } = {},
+): Schemas["StatsDataset"] | null {
+  const offset = page.cursor === undefined ? 0 : decodeOffset(page.cursor);
+  const limit = page.limit ?? DATASET_PAGE_DEFAULT;
+  if (offset === null || !Number.isInteger(limit) || limit < 1 || limit > DATASET_PAGE_MAX)
+    return null;
   const entries = ownerReceipts(owner)
     .map((entry) => {
       advance(entry);
@@ -128,7 +145,9 @@ export function mockStatsDataset(
     (categories as readonly string[]).includes(value ?? "")
       ? (value as Schemas["Category"])
       : "altro";
-  const receipts = entries.map(({ entry, when }) => ({
+  const pageEntries = entries.slice(offset, offset + limit);
+  const hasMore = entries.length > offset + limit;
+  const receipts = pageEntries.map(({ entry, when }) => ({
     id: entry.receipt.id,
     date: new Date(when).toISOString(),
     // Il backend armonizza i nomi (insegna, chiave normalizzata, P.IVA): qui insegna o nome.
@@ -139,7 +158,7 @@ export function mockStatsDataset(
     avoidability: entry.extraction!.avoidability,
     source: entry.receipt.source,
   }));
-  const items = entries.flatMap(({ entry }) =>
+  const items = pageEntries.flatMap(({ entry }) =>
     [...entry.extraction!.items]
       .sort((a, b) => a.position - b.position)
       .map((item) => ({
@@ -159,8 +178,9 @@ export function mockStatsDataset(
   return {
     from: query.from === undefined ? null : new Date(query.from).toISOString(),
     to: query.to === undefined ? null : new Date(query.to).toISOString(),
-    truncated: receipts.length >= DATASET_LIMIT || items.length >= DATASET_LIMIT,
-    receipts: receipts.slice(0, DATASET_LIMIT),
-    items: items.slice(0, DATASET_LIMIT),
+    truncated: hasMore,
+    nextCursor: hasMore ? encodeOffset(offset + limit) : null,
+    receipts,
+    items,
   };
 }

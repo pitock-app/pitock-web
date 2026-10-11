@@ -132,7 +132,8 @@ First run: `pnpm exec playwright install chromium`.
 ## 📐 Metrics — how they are computed
 
 All dashboard numbers come from `GET /v1/stats/dataset` of `pitock-api`: one row per receipt and
-one per line item in the period (the **facts**). Receipts arrive already dated in `Europe/Rome` and
+one per line item in the period (the **facts**), downloaded in pages of 1000 receipts and merged
+(up to 50 pages; past that the dashboard says the period is truncated). Receipts arrive already dated in `Europe/Rome` and
 with harmonized merchant names (see the [API README](https://github.com/pitock/pitock-api#-server-side-metrics)).
 
 Everything below is computed **in the browser** (`src/features/dashboard/lib/`), so the store and
@@ -324,6 +325,7 @@ src/
 - **Contract-driven**: types are generated from the backend OpenAPI document; a parity test keeps the mocks aligned with it.
 - **Server state** with TanStack Query, **local state** (upload queue) with Zustand, forms with React Hook Form + Zod.
 - **Uploads go straight to Supabase Storage** with a short-lived signed URL; the API only receives ids.
+- **Strict CSP**: `src/proxy.ts` sends a fresh nonce on every request (`script-src 'self' 'nonce-…' 'strict-dynamic'`, no `'unsafe-inline'` for scripts); Next.js and next-themes apply it to their scripts. Pages are therefore rendered dynamically.
 - Charts with Recharts; every chart has an accessible table view.
 - Draggable cards with [dnd-kit](https://dndkit.com/) (pointer, touch and keyboard sensors, Italian screen-reader announcements).
 

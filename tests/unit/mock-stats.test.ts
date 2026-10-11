@@ -128,6 +128,25 @@ describe("handler MSW del dataset", () => {
     expect(dataset.items.every((item) => ids.has(item.receiptId))).toBe(true);
   });
 
+  it("divide il dataset in pagine con il cursore, come il backend", async () => {
+    const all = (await (
+      await call("/stats/dataset?from=2026-01-01&limit=1000")
+    ).json()) as Schemas["StatsDataset"];
+    const seen: string[] = [];
+    let cursor: string | null = null;
+    do {
+      const query: string = `/stats/dataset?from=2026-01-01&limit=3${cursor ? `&cursor=${cursor}` : ""}`;
+      const page = (await (await call(query)).json()) as Schemas["StatsDataset"];
+      expect(page.receipts.length).toBeLessThanOrEqual(3);
+      expect(page.truncated).toBe(page.nextCursor !== null);
+      seen.push(...page.receipts.map((r) => r.id));
+      cursor = page.nextCursor;
+    } while (cursor);
+    expect(seen).toEqual(all.receipts.map((r) => r.id));
+    expect((await call("/stats/dataset?cursor=%%%")).status).toBe(400);
+    expect((await call("/stats/dataset?limit=5000")).status).toBe(400);
+  });
+
   it("rifiuta un intervallo al contrario", async () => {
     const response = await call("/stats/dataset?from=2026-10-02&to=2026-10-01");
     expect(response.status).toBe(400);

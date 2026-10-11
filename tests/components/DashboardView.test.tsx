@@ -90,6 +90,7 @@ const dataset: Dataset = {
   from: "2026-08-31T22:00:00.000Z",
   to: "2026-09-30T22:00:00.000Z",
   truncated: false,
+  nextCursor: null,
   receipts: [
     receipt("r4", "2026-09-20T09:00:00Z", "Esselunga", 30, "casa", "file"),
     receipt("r3", "2026-09-12T09:00:00Z", "Eni", 60, "carburante", "manual"),
@@ -158,7 +159,9 @@ describe("DashboardView", () => {
     expect(screen.getByTestId("dashboard-kpi-average")).toHaveTextContent(money(31.25));
     const kpis = screen.getByRole("region", { name: "Riepilogo del periodo" });
     expect(within(kpis).queryByText("Variazione")).not.toBeInTheDocument();
-    expect(queries.map((query) => query.toString())).toContain("from=2026-09-01&to=2026-09-30");
+    expect(queries.map((query) => query.toString())).toContain(
+      "from=2026-09-01&to=2026-09-30&limit=1000",
+    );
 
     // Settembre è finito: solo la spesa reale del periodo, senza previsione.
     expect(await screen.findByTestId("forecast-spent")).toHaveTextContent(money(125));
@@ -448,7 +451,14 @@ describe("DashboardView", () => {
     const ids = [...section.querySelectorAll("[data-card-id]")].map((el) =>
       el.getAttribute("data-card-id"),
     );
-    expect(ids).toEqual(["by-source", "top-merchants", "by-period", "by-category"]);
+    expect(ids).toEqual([
+      "by-source",
+      "top-merchants",
+      "by-period",
+      "by-category",
+      "flow",
+      "calendar",
+    ]);
     expect(
       within(section as HTMLElement).getByRole("button", { name: "Sposta Per categoria" }),
     ).toBeInTheDocument();

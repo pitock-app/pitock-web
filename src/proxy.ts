@@ -6,6 +6,7 @@ import {
   isProtectedPath,
   LOGIN_PATH,
 } from "@/lib/auth/routes";
+import { contentSecurityPolicy, createNonce } from "@/lib/csp";
 import { isMockMode } from "@/lib/env";
 import { updateSupabaseSession } from "@/lib/supabase/middleware";
 
@@ -26,8 +27,24 @@ function redirectTo(url: URL, from: NextResponse) {
  */
 const useMockSession = isMockMode;
 
-/** Refresh della sessione e protezione delle rotte (in Next 16 sostituisce middleware.ts). */
+/**
+ * Refresh della sessione, protezione delle rotte (in Next 16 sostituisce middleware.ts) e
+ * Content Security Policy con un nonce nuovo a ogni richiesta.
+ */
 export async function proxy(request: NextRequest) {
+  // Next legge il nonce dalla CSP della richiesta e lo applica ai suoi script; il layout lo
+  // legge da `x-nonce` per gli script inline di next-themes. `NextResponse.next({ request })`
+  // inoltra questi header alla pagina.
+  const nonce = createNonce();
+  const csp = contentSecurityPolicy(nonce, process.env.NODE_ENV === "development");
+  request.headers.set("x-nonce", nonce);
+  request.headers.set("content-security-policy", csp);
+  const response = await route(request);
+  response.headers.set("Content-Security-Policy", csp);
+  return response;
+}
+
+async function route(request: NextRequest) {
   const { pathname, search } = request.nextUrl;
 
   const { response, isAuthenticated } = useMockSession

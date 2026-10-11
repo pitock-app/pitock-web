@@ -2,8 +2,7 @@
 
 import { Filter, LayoutDashboard, Loader2, Plus, RotateCcw } from "lucide-react";
 import Link from "next/link";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useMemo, useRef } from "react";
+import { useMemo } from "react";
 import { EmptyState, ErrorState } from "@/components/layout";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -13,49 +12,25 @@ import { it } from "@/lib/i18n/it";
 import { lastDay, shiftMonth, ymd } from "@/lib/period";
 import { routes } from "@/lib/routes";
 import { cn } from "@/lib/utils";
-import { AvoidabilityByPeriod, AvoidabilityOverview } from "./AvoidabilityCharts";
-import { CategoryPie } from "./CategoryPie";
-import { DashboardSection } from "./DashboardSection";
+import { DashboardSections } from "./DashboardSections";
 import { DimensionFilters } from "./DimensionFilters";
 import { ForecastCard } from "./ForecastCard";
-import { FrequencyChart } from "./FrequencyChart";
+import { useDashboardFilters } from "./hooks/useDashboardFilters";
 import { useStats } from "./hooks/useStats";
 import { useStatsDataset } from "./hooks/useStatsDataset";
-import { KpiCards } from "./KpiCards";
 import { storeColors } from "./lib/colors";
-import { useDashboardLayout } from "./lib/layout";
+import { currentRange, granularityOf, isRangeInvalid, periodKeys } from "./lib/dashboard-period";
 import {
-  currentRange,
-  granularityOf,
-  isRangeInvalid,
-  parseDashboardFilters,
-  periodKeys,
-  serializeDashboardFilters,
-  type DashboardFilters,
-} from "./lib/dashboard-period";
-import {
-  categoryLines,
   filterDataset,
   receiptAmounts,
   storeOptions,
-  summarize,
   type Dataset,
   type DatasetFilters,
 } from "./lib/dataset";
-import { avoidabilitySummary } from "./lib/avoidability";
 import { FORECAST_HISTORY_MONTHS, forecastRange } from "./lib/forecast";
-import { productStats, toPurchases } from "./lib/products";
-import { PeriodBars } from "./PeriodBars";
+import { useDashboardLayout } from "./lib/layout";
+import { dashboardView } from "./lib/view";
 import { PeriodPicker } from "./PeriodPicker";
-import { PriceHistory } from "./PriceHistory";
-import { PriceChanges, SavingsRanking, TopProducts } from "./ProductRankings";
-import { SavingsCard } from "./SavingsCard";
-import { SavingsTips } from "./SavingsTips";
-import { SortableCards } from "./SortableCards";
-import { SourceSplit } from "./SourceSplit";
-import { StoreComparison } from "./StoreComparison";
-import { TopMerchants } from "./TopMerchants";
-import { UnitPrices } from "./UnitPrices";
 
 const t = it.dashboard;
 
@@ -115,10 +90,7 @@ function toSpends(dataset: Dataset, filters: DatasetFilters) {
  * `GET /v1/stats/dataset`, così negozio e categoria filtrano ogni grafico allo stesso modo.
  */
 export function DashboardView() {
-  const router = useRouter();
-  const pathname = usePathname();
-  const searchParams = useSearchParams();
-  const filters = useMemo(() => parseDashboardFilters(searchParams), [searchParams]);
+  const { filters, setPeriod, setDimensions } = useDashboardFilters();
   const { customized, reset: resetLayout } = useDashboardLayout();
   // Le date si calcolano al cambio di periodo, non a ogni render.
   const { range, query, keys, granularity, today, historyQuery } = useMemo(() => {
@@ -152,21 +124,19 @@ export function DashboardView() {
   const allTime = useStats(periodEmpty ? { granularity: "year" } : null);
   const noReceiptsAtAll = periodEmpty && allTime.data?.totals.nReceipts === 0;
 
-  const view = useMemo(() => {
-    if (!dataset.data) return null;
-    const { receipts, items } = filterDataset(dataset.data, dimensions);
-    const amounts = receiptAmounts(receipts, items, dimensions.category);
-    const purchases = toPurchases(receipts, items);
-    const lines = categoryLines(receipts, items, amounts);
-    return {
-      receipts,
-      summary: summarize(receipts, amounts, granularity, lines),
-      lines,
-      avoidability: avoidabilitySummary(lines),
-      purchases,
-      products: productStats(purchases),
-    };
-  }, [dataset.data, dimensions, granularity]);
+  // Giorni già trascorsi del periodo: dall'inizio (o dal primo scontrino) a oggi o alla fine.
+  const span = useMemo(() => {
+    const days = dataset.data?.receipts.map((r) => toRomeDateInput(new Date(r.date))) ?? [];
+    const from =
+      range.from ?? days.reduce<string | null>((min, d) => (!min || d < min ? d : min), null);
+    const to = range.to && range.to < today ? range.to : today;
+    return from && from <= to ? { from, to } : null;
+  }, [dataset.data, range, today]);
+
+  const view = useMemo(
+    () => (dataset.data ? dashboardView(dataset.data, dimensions, granularity) : null),
+    [dataset.data, dimensions, granularity],
+  );
 
   // Spesa reale del periodo scelto e previsione fino alla sua fine, dallo storico.
   const forecast = useMemo(
@@ -190,36 +160,6 @@ export function DashboardView() {
     ]);
     return { stores: storeOptions(dataset.data?.receipts ?? []), colorOf: storeColors(ranking) };
   }, [dataset.data, history.data]);
-
-  // `router.replace` aggiorna l'URL dopo: due modifiche ravvicinate (data iniziale e finale)
-  // partono dall'ultimo periodo scritto, altrimenti la seconda cancellerebbe la prima.
-  const latestFilters = useRef(filters);
-  useEffect(() => {
-    latestFilters.current = filters;
-  }, [filters]);
-
-  const writeFilters = (next: DashboardFilters) => {
-    latestFilters.current = next;
-    const search = serializeDashboardFilters(next).toString();
-    router.replace(search ? `${pathname}?${search}` : pathname, { scroll: false });
-  };
-  // Il selettore del periodo non conosce negozio e categoria: si conservano.
-  const setPeriod = (update: (previous: DashboardFilters) => DashboardFilters) => {
-    const { store, category } = latestFilters.current;
-    writeFilters({
-      ...update(latestFilters.current),
-      ...(store ? { store } : {}),
-      ...(category ? { category } : {}),
-    });
-  };
-  const setDimensions = (next: DatasetFilters) => {
-    const { store: _store, category: _category, ...period } = latestFilters.current;
-    writeFilters({
-      ...period,
-      ...(next.store ? { store: next.store } : {}),
-      ...(next.category ? { category: next.category } : {}),
-    });
-  };
 
   const forecastSlot = () => {
     if (forecast) {
@@ -286,128 +226,16 @@ export function DashboardView() {
         />
       );
     }
-    const { summary, products, purchases, lines, avoidability } = view;
     return (
-      <>
-        {dataset.data?.truncated && (
-          <p role="status" className="bg-muted rounded-lg px-3 py-2 text-sm">
-            {t.truncated}
-          </p>
-        )}
-        <DashboardSection
-          id="summary"
-          title={t.sections.summary}
-          description={t.sections.summaryDescription}
-        >
-          <div className="grid gap-4 lg:grid-cols-3">
-            {forecastSlot()}
-            <div className="flex flex-col gap-4">
-              <SavingsCard products={products} />
-              <SavingsTips products={products} className="flex-1" />
-            </div>
-          </div>
-          <KpiCards totals={summary.totals} />
-        </DashboardSection>
-
-        <DashboardSection
-          id="overview"
-          title={t.sections.overview}
-          description={t.sections.overviewDescription}
-        >
-          <SortableCards
-            section="overview"
-            cards={[
-              {
-                id: "by-period",
-                node: (
-                  <PeriodBars
-                    rows={summary.byPeriod}
-                    granularity={summary.granularity}
-                    // Con i dati del periodo precedente ancora a schermo le chiavi non corrispondono.
-                    keys={dataset.isPlaceholderData ? null : keys}
-                  />
-                ),
-              },
-              {
-                id: "by-category",
-                node: (
-                  <CategoryPie
-                    rows={summary.byCategory}
-                    total={summary.totals.total}
-                    lines={lines}
-                  />
-                ),
-              },
-              {
-                id: "top-merchants",
-                node: (
-                  <TopMerchants
-                    rows={summary.topMerchants}
-                    withoutMerchant={summary.withoutMerchant}
-                    total={summary.totals.total}
-                    colorOf={colorOf}
-                  />
-                ),
-              },
-              {
-                id: "by-source",
-                node: <SourceSplit rows={summary.bySource} total={summary.totals.total} />,
-              },
-            ]}
-          />
-        </DashboardSection>
-
-        <DashboardSection
-          id="avoidability"
-          title={t.sections.avoidability}
-          description={t.sections.avoidabilityDescription}
-        >
-          <SortableCards
-            section="avoidability"
-            cards={[
-              {
-                id: "avoidability",
-                node: <AvoidabilityOverview totals={avoidability} lines={lines} />,
-              },
-              {
-                id: "avoidability-by-period",
-                node: (
-                  <AvoidabilityByPeriod
-                    lines={lines}
-                    granularity={summary.granularity}
-                    keys={dataset.isPlaceholderData ? null : keys}
-                  />
-                ),
-              },
-            ]}
-          />
-        </DashboardSection>
-
-        <DashboardSection
-          id="products"
-          title={t.sections.products}
-          description={t.sections.productsDescription}
-        >
-          <SortableCards
-            section="products"
-            cards={[
-              { id: "top-products", node: <TopProducts products={products} /> },
-              { id: "savings-ranking", node: <SavingsRanking products={products} /> },
-              {
-                id: "store-comparison",
-                node: <StoreComparison products={products} colorOf={colorOf} />,
-              },
-              { id: "price-changes", node: <PriceChanges products={products} /> },
-              {
-                id: "price-history",
-                node: <PriceHistory products={products} purchases={purchases} colorOf={colorOf} />,
-              },
-              { id: "unit-prices", node: <UnitPrices products={products} /> },
-              { id: "frequency", node: <FrequencyChart products={products} /> },
-            ]}
-          />
-        </DashboardSection>
-      </>
+      <DashboardSections
+        view={view}
+        truncated={dataset.data?.truncated ?? false}
+        // Con i dati del periodo precedente ancora a schermo le chiavi non corrispondono.
+        keys={dataset.isPlaceholderData ? null : keys}
+        colorOf={colorOf}
+        forecast={forecastSlot()}
+        span={span}
+      />
     );
   };
 
