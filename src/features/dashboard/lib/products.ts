@@ -5,6 +5,7 @@ type Schemas = components["schemas"];
 export type Category = Schemas["Category"];
 export type ReceiptFact = Schemas["StatsReceiptFact"];
 export type ItemFact = Schemas["StatsItemFact"];
+export type Avoidability = Schemas["Avoidability"];
 
 /** Unità del prezzo confrontabile: al pezzo, oppure al kg / litro. */
 export type PriceUnit = "pz" | "kg" | "l";

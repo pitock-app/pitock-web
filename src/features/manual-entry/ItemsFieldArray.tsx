@@ -6,7 +6,7 @@ import { useFieldArray, useFormContext } from "react-hook-form";
 import { Field, NativeSelect } from "@/components/form";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { categories } from "@/lib/api/enums";
+import { avoidabilities, categories } from "@/lib/api/enums";
 import { it } from "@/lib/i18n/it";
 import { emptyItem, type ManualEntryValues } from "./manual-entry.schema";
 
@@ -35,7 +35,7 @@ export function ItemsFieldArray({ idPrefix = "receipt" }: { idPrefix?: string })
             key={field.id}
             role="group"
             aria-label={t.itemLabel(index + 1)}
-            className="bg-muted/40 grid gap-3 rounded-lg border p-3 sm:grid-cols-[2fr_1.5fr_repeat(4,1fr)_auto]"
+            className="bg-muted/40 grid gap-3 rounded-lg border p-3 sm:grid-cols-[2fr_1.5fr_1.3fr_repeat(4,1fr)_auto]"
           >
             <Field
               id={id("description")}
@@ -51,6 +51,18 @@ export function ItemsFieldArray({ idPrefix = "receipt" }: { idPrefix?: string })
                   {categories.map((value) => (
                     <option key={value} value={value}>
                       {it.categories[value]}
+                    </option>
+                  ))}
+                </NativeSelect>
+              )}
+            </Field>
+            <Field id={id("avoidability")} label={t.avoidability}>
+              {(c) => (
+                <NativeSelect {...c} {...register(`items.${index}.avoidability`)}>
+                  <option value="">{t.avoidabilityNone}</option>
+                  {avoidabilities.map((value) => (
+                    <option key={value} value={value}>
+                      {it.avoidability[value]}
                     </option>
                   ))}
                 </NativeSelect>

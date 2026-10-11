@@ -48,6 +48,7 @@ export function extractionToFormValues(extraction: Extraction): ExtractionFormVa
     // Vuote se l'estrazione non le ha: il form chiede di sceglierle.
     category: (extraction.category ?? "") as ExtractionFormValues["category"],
     paymentMethod: (extraction.paymentMethod ?? "") as ExtractionFormValues["paymentMethod"],
+    avoidability: extraction.avoidability ?? "",
     merchantVat: extraction.merchantVat ?? "",
     taxTotal: amountInput(extraction.taxTotal),
     notes: extraction.notes ?? "",
@@ -58,6 +59,7 @@ export function extractionToFormValues(extraction: Extraction): ExtractionFormVa
       amount: amountInput(item.amount),
       vatRate: numberInput(item.vatRate),
       category: item.category ?? "",
+      avoidability: item.avoidability ?? "",
       ...(item.normalizedName || item.brand || item.size
         ? {
             product: {
@@ -89,6 +91,7 @@ export function toExtractionPatch(values: ExtractionFormOutput): ExtractionPatch
     currency: values.currency,
     category: values.category,
     paymentMethod: values.paymentMethod,
+    avoidability: values.avoidability ?? null,
     merchantVat: values.merchantVat ?? null,
     taxTotal: values.taxTotal ?? null,
     notes: values.notes ?? null,

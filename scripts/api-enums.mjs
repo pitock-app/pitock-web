@@ -11,6 +11,7 @@ const ENUMS = {
   aiProviders: "Provider",
   aiModes: "AiMode",
   sizeUnits: "SizeUnit",
+  avoidabilities: "Avoidability",
   // Enum dentro una proprietà: [schema, proprietà].
 };
 

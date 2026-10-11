@@ -34,3 +34,13 @@ export function storeColors(ranking: string[]): (store: string | null) => string
   );
   return (store) => (store ? (colors.get(store) ?? NEUTRAL) : NEUTRAL);
 }
+
+/** Livelli di evitabilità: rampa ordinale (`--avoid-*`); il non classificato è grigio tenue. */
+export const AVOIDABILITY_COLORS = {
+  essenziale: "var(--avoid-essenziale)",
+  utile: "var(--avoid-utile)",
+  superfluo: "var(--avoid-superfluo)",
+  unclassified: NEUTRAL,
+} as const;
+/** Opacità del non classificato: resta visibile ma non compete con i livelli. */
+export const UNCLASSIFIED_OPACITY = 0.35;

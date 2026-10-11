@@ -4,7 +4,7 @@ import { useFormContext } from "react-hook-form";
 import { Field, NativeSelect } from "@/components/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { categories, paymentMethods } from "@/lib/api/enums";
+import { avoidabilities, categories, paymentMethods } from "@/lib/api/enums";
 import { it } from "@/lib/i18n/it";
 import type { ManualEntryValues } from "./manual-entry.schema";
 
@@ -79,6 +79,19 @@ export function ReceiptFields({ idPrefix = "receipt" }: { idPrefix?: string }) {
             {categories.map((value) => (
               <option key={value} value={value}>
                 {it.categories[value]}
+              </option>
+            ))}
+          </NativeSelect>
+        )}
+      </Field>
+
+      <Field id={id("avoidability")} label={t.avoidability} labelSuffix={t.optional}>
+        {(control) => (
+          <NativeSelect {...control} {...register("avoidability")}>
+            <option value="">{t.avoidabilityNone}</option>
+            {avoidabilities.map((value) => (
+              <option key={value} value={value}>
+                {it.avoidability[value]}
               </option>
             ))}
           </NativeSelect>

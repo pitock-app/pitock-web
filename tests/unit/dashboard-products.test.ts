@@ -32,6 +32,7 @@ const receipt = (
   merchantOriginal: merchantName,
   total,
   category: "alimentari",
+  avoidability: null,
   source: "camera",
 });
 
@@ -53,6 +54,7 @@ const item = (
   brand: null,
   size: null,
   sizeUnit: null,
+  avoidability: null,
 });
 
 describe("normalizzazione dei prodotti", () => {

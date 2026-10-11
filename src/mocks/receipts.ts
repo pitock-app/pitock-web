@@ -1,5 +1,6 @@
 import {
   aiProviders,
+  avoidabilities,
   categories,
   mimeTypes,
   paymentMethods,
@@ -165,7 +166,8 @@ function isItem(value: unknown): value is NonNullable<Schemas["ExtractionPatch"]
     optional(item.normalizedName, (v) => isNullableText(v, 200)) &&
     optional(item.brand, (v) => isNullableText(v, 100)) &&
     optional(item.size, (v) => v === null || (typeof v === "number" && v > 0)) &&
-    optional(item.sizeUnit, (v) => v === null || includes(sizeUnits, v))
+    optional(item.sizeUnit, (v) => v === null || includes(sizeUnits, v)) &&
+    optional(item.avoidability, (v) => v === null || includes(avoidabilities, v))
   );
 }
 
@@ -224,6 +226,10 @@ export function parseExtractionPatch(body: Record<string, unknown> | null): Extr
         if (value !== null && !includes(categories, value)) return null;
         patch.category = value as Schemas["Category"] | null;
         break;
+      case "avoidability":
+        if (value !== null && !includes(avoidabilities, value)) return null;
+        patch.avoidability = value as Schemas["Avoidability"] | null;
+        break;
       case "items":
         if (!Array.isArray(value) || value.length > 500 || !value.every(isItem)) return null;
         patch.items = toReceiptItems(
@@ -280,6 +286,7 @@ export function parseManualInput(
     return null;
   }
   if (!optional(notes, (v) => typeof v === "string" && v.length <= 2000)) return null;
+  if (!optional(body.avoidability, (v) => includes(avoidabilities, v))) return null;
   if (!optional(items, (v) => Array.isArray(v) && v.length <= 500 && v.every(isItem))) {
     return null;
   }
@@ -292,6 +299,7 @@ export function parseManualInput(
     ...(typeof taxTotal === "number" ? { taxTotal } : {}),
     paymentMethod: body.paymentMethod,
     category: body.category,
+    ...(includes(avoidabilities, body.avoidability) ? { avoidability: body.avoidability } : {}),
     ...(typeof notes === "string" ? { notes } : {}),
     ...(Array.isArray(items)
       ? {

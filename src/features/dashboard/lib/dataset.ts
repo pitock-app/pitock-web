@@ -1,6 +1,12 @@
 import type { components } from "@/lib/api/schema";
 import { toRomeDateInput } from "@/lib/format";
-import { productLabel, type Category, type ItemFact, type ReceiptFact } from "./products";
+import {
+  productLabel,
+  type Avoidability,
+  type Category,
+  type ItemFact,
+  type ReceiptFact,
+} from "./products";
 
 type Schemas = components["schemas"];
 export type Dataset = Schemas["StatsDataset"];
@@ -67,6 +73,8 @@ export type CategoryLine = {
   /** Descrizione della riga; null per le voci che chiudono il totale. */
   label: string | null;
   kind: "item" | "rest" | "receipt";
+  /** Evitabilità della riga o, se manca, dello scontrino; null se non classificata. */
+  avoidability: Avoidability | null;
   quantity: number | null;
   amount: number;
 };
@@ -108,6 +116,7 @@ export function categoryLines(
         category: item.category,
         label: productLabel(item.description) || item.description,
         kind: "item",
+        avoidability: item.avoidability ?? receipt.avoidability,
         quantity: item.quantity,
         amount: round2(amount),
       });
@@ -122,6 +131,7 @@ export function categoryLines(
       category: receipt.category,
       label: null,
       kind: receiptItems.length > 0 ? "rest" : "receipt",
+      avoidability: receipt.avoidability,
       quantity: null,
       amount: rest,
     });

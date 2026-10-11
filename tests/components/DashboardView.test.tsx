@@ -53,7 +53,16 @@ const receipt = (
   total: number,
   category: Dataset["receipts"][number]["category"],
   source: Dataset["receipts"][number]["source"] = "camera",
-) => ({ id, date, merchantName, merchantOriginal: merchantName, total, category, source });
+) => ({
+  id,
+  date,
+  merchantName,
+  merchantOriginal: merchantName,
+  total,
+  category,
+  avoidability: null,
+  source,
+});
 
 const line = (
   receiptId: string,
@@ -72,6 +81,7 @@ const line = (
   brand: null,
   size: null,
   sizeUnit: null,
+  avoidability: null,
 });
 
 /** Settembre 2026: latte in due negozi a prezzi diversi, benzina senza righe. */
@@ -241,6 +251,34 @@ describe("DashboardView", () => {
     renderWithQuery(<DashboardView />);
     // Solo lo scontrino r4: la riga del detersivo (2,50 €), non il totale di 30 €.
     expect(await screen.findByTestId("dashboard-kpi-total")).toHaveTextContent(money(2.5));
+  });
+
+  it("mostra l'indice di evitabilità e i prodotti superflui", async () => {
+    // r3 (carburante, 60 €) essenziale; detersivo utile; r1 superfluo; il resto non classificato.
+    const classified: Dataset = {
+      ...dataset,
+      receipts: dataset.receipts.map((r) =>
+        r.id === "r3"
+          ? { ...r, avoidability: "essenziale" as const }
+          : r.id === "r1"
+            ? { ...r, avoidability: "superfluo" as const }
+            : r,
+      ),
+      items: dataset.items.map((i) =>
+        i.description === "DETERSIVO PIATTI" ? { ...i, avoidability: "utile" as const } : i,
+      ),
+    };
+    mockDataset({ current: classified });
+    renderWithQuery(<DashboardView />);
+    // Classificati: 60 essenziale, 2,50 utile, 20 superfluo → (1,25 + 20) / 82,50 = 26.
+    expect(await screen.findByTestId("avoidability-index")).toHaveTextContent("26");
+    expect(screen.getByTestId("avoidability-avoidable")).toHaveTextContent(money(21.25));
+    const top = screen.getByRole("region", { name: "Acquisti superflui" });
+    expect(within(top).getByRole("link", { name: /Latte intero 1L/ })).toHaveAttribute(
+      "href",
+      "/receipts/r1",
+    );
+    expect(screen.getByText(/di spesa non ancora classificata/)).toBeInTheDocument();
   });
 
   it("senza scontrini per i filtri lo dice e permette di toglierli", async () => {

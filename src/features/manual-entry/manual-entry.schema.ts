@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { categories, paymentMethods } from "@/lib/api/enums";
+import { avoidabilities, categories, paymentMethods } from "@/lib/api/enums";
 import type { components } from "@/lib/api/schema";
 import { decimalPlaces, parseItalianNumber, romeLocalInputToIso } from "@/lib/format";
 import { it } from "@/lib/i18n/it";
@@ -46,6 +46,13 @@ const optionalAmount = () =>
     messages: { invalid: e.amountInvalid, decimals: e.amountDecimals, range: e.amountRange },
   });
 
+/** Evitabilità facoltativa: "" → undefined (non indicata). */
+const optionalAvoidability = () =>
+  z
+    .union([z.enum(avoidabilities), z.literal("")])
+    .optional()
+    .transform((value) => value || undefined);
+
 const optionalText = (max: number, message: string) =>
   z
     .string()
@@ -74,6 +81,7 @@ export const manualItemSchema = z.object({
     .union([z.enum(categories), z.literal("")])
     .optional()
     .transform((value) => value || undefined),
+  avoidability: optionalAvoidability(),
 });
 
 /**
@@ -106,6 +114,7 @@ export const manualEntrySchema = z.object({
     .transform((value) => value.toUpperCase()),
   category: z.enum(categories, { error: e.categoryRequired }),
   paymentMethod: z.enum(paymentMethods, { error: e.paymentMethodRequired }),
+  avoidability: optionalAvoidability(),
   merchantVat: optionalText(32, e.vatTooLong),
   taxTotal: optionalAmount(),
   notes: optionalText(2000, e.notesTooLong),
@@ -122,6 +131,7 @@ export const emptyItem: ManualEntryValues["items"][number] = {
   amount: "",
   vatRate: "",
   category: "",
+  avoidability: "",
 };
 
 /** Valori iniziali: data e ora di adesso (fuso di Roma), valuta EUR. */
@@ -134,6 +144,7 @@ export function defaultManualEntryValues(now: string): ManualEntryValues {
     // Le select partono vuote: lo schema chiede di scegliere.
     category: "" as ManualEntryValues["category"],
     paymentMethod: "" as ManualEntryValues["paymentMethod"],
+    avoidability: "",
     merchantVat: "",
     taxTotal: "",
     notes: "",

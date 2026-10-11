@@ -52,3 +52,7 @@ export const aiModesExact: Exact<(typeof aiModes)[number], Schemas["AiMode"]> = 
 
 export const sizeUnits = ["g", "kg", "ml", "cl", "l", "pz"] as const;
 export const sizeUnitsExact: Exact<(typeof sizeUnits)[number], Schemas["SizeUnit"]> = true;
+
+export const avoidabilities = ["essenziale", "utile", "superfluo"] as const;
+export const avoidabilitiesExact: Exact<(typeof avoidabilities)[number], Schemas["Avoidability"]> =
+  true;

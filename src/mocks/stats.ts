@@ -136,6 +136,7 @@ export function mockStatsDataset(
     merchantOriginal: entry.extraction!.merchantName,
     total: entry.extraction!.total,
     category: asCategory(entry.extraction!.category),
+    avoidability: entry.extraction!.avoidability,
     source: entry.receipt.source,
   }));
   const items = entries.flatMap(({ entry }) =>
@@ -152,6 +153,7 @@ export function mockStatsDataset(
         brand: item.brand,
         size: item.size,
         sizeUnit: item.sizeUnit,
+        avoidability: item.avoidability,
       })),
   );
   return {

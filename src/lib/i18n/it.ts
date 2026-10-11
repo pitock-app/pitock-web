@@ -290,6 +290,11 @@ export const it = {
     igiene: "Igiene personale",
     altro: "Altro",
   },
+  avoidability: {
+    essenziale: "Essenziale",
+    utile: "Utile",
+    superfluo: "Superfluo",
+  },
   paymentMethods: {
     contanti: "Contanti",
     carta: "Carta di credito",
@@ -570,6 +575,8 @@ export const it = {
     itemLabel: (index: number) => `Riga ${index}`,
     itemCategory: "Categoria prodotto",
     itemCategoryFromReceipt: "Come lo scontrino",
+    avoidability: "Evitabilità",
+    avoidabilityNone: "Non indicata",
     description: "Descrizione",
     quantity: "Quantità",
     unitPrice: "Prezzo unitario",
@@ -705,6 +712,9 @@ export const it = {
       summaryDescription: "Come sta andando il mese e quanto potresti risparmiare.",
       overview: "Andamento generale",
       overviewDescription: "Dove vanno i soldi nel periodo scelto: mesi, categorie, negozi.",
+      avoidability: "Spesa evitabile",
+      avoidabilityDescription:
+        "Quanto di ciò che compri è essenziale, utile o superfluo, secondo la lettura degli scontrini.",
       products: "Prodotto per prodotto",
       productsDescription:
         "Dalle righe degli scontrini: quali prodotti pesano di più e dove li paghi meno.",
@@ -827,6 +837,31 @@ export const it = {
       y: "Prezzo medio",
       z: "Spesa totale",
       none: "Nessun prodotto comprato più di una volta nel periodo.",
+    },
+    avoidability: {
+      title: "Indice di evitabilità",
+      description:
+        "Quota della spesa che si poteva evitare: il superfluo conta per intero, l'utile per metà.",
+      indexLabel: "su 100",
+      avoidable: (amount: string) => `${amount} evitabili nel periodo`,
+      level: "Livello",
+      share: "Quota",
+      unclassified: "Non classificato",
+      unclassifiedNote: (amount: string) =>
+        `${amount} di spesa non ancora classificata, esclusa dall'indice: rilancia l'estrazione degli scontrini o indica l'evitabilità correggendoli.`,
+      none: "Nessuna spesa classificata nel periodo. Gli scontrini estratti da ora in poi vengono classificati; per i precedenti rilancia l'estrazione.",
+      byPeriodTitle: { month: "Evitabilità per mese", year: "Evitabilità per anno" },
+      byPeriodDescription: "Spesa di ogni periodo divisa per livello di evitabilità.",
+      byCategoryTitle: "Evitabilità per categoria",
+      byCategoryDescription: "Indice di ogni categoria, dalla più evitabile.",
+      byCategoryDetail: (superfluous: string, useful: string) =>
+        `${superfluous} superfluo · ${useful} utile`,
+      index: "Indice",
+      topTitle: "Acquisti superflui",
+      topDescription: "I prodotti superflui su cui spendi di più. Apri lo scontrino più recente.",
+      topNone: "Nessun prodotto superfluo nel periodo.",
+      topCount: "Acquisti",
+      topDetail: (count: string, date: string) => `${count} · ultimo il ${date}`,
     },
     categoryDrill: {
       hint: "Scegli una categoria per vedere le sue voci, riga per riga.",

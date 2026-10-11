@@ -160,17 +160,23 @@ const SAMPLE_MERCHANTS: {
   name: string;
   category: Schemas["Category"];
   payment: Schemas["PaymentMethod"];
+  avoidability: Schemas["Avoidability"];
 }[] = [
-  { name: "Esselunga", category: "alimentari", payment: "bancomat" },
-  { name: "Bar Centrale", category: "ristorazione", payment: "contanti" },
-  { name: "Farmacia San Carlo", category: "salute", payment: "carta" },
-  { name: "Eni Station", category: "carburante", payment: "carta" },
-  { name: "Libreria Coop", category: "svago", payment: "bancomat" },
-  { name: "Trenitalia", category: "trasporti", payment: "carta" },
-  { name: "Leroy Merlin", category: "casa", payment: "bancomat" },
-  { name: "Zara", category: "abbigliamento", payment: "carta" },
-  { name: "MediaWorld", category: "tecnologia", payment: "carta" },
-  { name: "Enel Energia", category: "servizi", payment: "altro" },
+  { name: "Esselunga", category: "alimentari", payment: "bancomat", avoidability: "essenziale" },
+  {
+    name: "Bar Centrale",
+    category: "ristorazione",
+    payment: "contanti",
+    avoidability: "superfluo",
+  },
+  { name: "Farmacia San Carlo", category: "salute", payment: "carta", avoidability: "essenziale" },
+  { name: "Eni Station", category: "carburante", payment: "carta", avoidability: "essenziale" },
+  { name: "Libreria Coop", category: "svago", payment: "bancomat", avoidability: "superfluo" },
+  { name: "Trenitalia", category: "trasporti", payment: "carta", avoidability: "essenziale" },
+  { name: "Leroy Merlin", category: "casa", payment: "bancomat", avoidability: "utile" },
+  { name: "Zara", category: "abbigliamento", payment: "carta", avoidability: "utile" },
+  { name: "MediaWorld", category: "tecnologia", payment: "carta", avoidability: "superfluo" },
+  { name: "Enel Energia", category: "servizi", payment: "altro", avoidability: "essenziale" },
 ];
 
 function hash(text: string): number {
@@ -242,6 +248,7 @@ function fakeExtraction(
     taxTotal: Math.round(total * 18) / 100,
     paymentMethod: sample.payment,
     category: sample.category,
+    avoidability: sample.avoidability,
     confidence: 0.92,
     notes: null,
     isCurrent: true,
@@ -403,6 +410,7 @@ function toItems(items: Schemas["ManualReceiptInput"]["items"]): Schemas["Receip
     brand: item.brand?.trim() || null,
     size: item.size ?? null,
     sizeUnit: item.size ? (item.sizeUnit ?? null) : null,
+    avoidability: item.avoidability ?? null,
   }));
 }
 
@@ -433,6 +441,7 @@ export function createManualReceipt(
     taxTotal: input.taxTotal ?? null,
     paymentMethod: input.paymentMethod,
     category: input.category,
+    avoidability: input.avoidability ?? null,
     confidence: null,
     notes: input.notes ?? null,
     isCurrent: true,
@@ -497,8 +506,21 @@ function seedReceipt(owner: string, index: number, now: number) {
   const items =
     index % 4 === 1
       ? [
-          { description: "Articolo 1", quantity: 1, unitPrice: total - 1, amount: total - 1 },
-          { description: "Articolo 2", quantity: 2, unitPrice: 0.5, amount: 1, vatRate: 22 },
+          {
+            description: "Articolo 1",
+            quantity: 1,
+            unitPrice: total - 1,
+            amount: total - 1,
+            avoidability: sample.avoidability,
+          },
+          {
+            description: "Articolo 2",
+            quantity: 2,
+            unitPrice: 0.5,
+            amount: 1,
+            vatRate: 22,
+            avoidability: "superfluo" as const,
+          },
         ]
       : undefined;
   const source = (["camera", "file", "manual"] as const)[index % 3];
@@ -512,6 +534,7 @@ function seedReceipt(owner: string, index: number, now: number) {
         total,
         currency: "EUR",
         category: sample.category,
+        avoidability: sample.avoidability,
         paymentMethod: sample.payment,
         ...(items ? { items } : {}),
       },
@@ -567,6 +590,7 @@ function seedReceipt(owner: string, index: number, now: number) {
     ...fakeExtraction(entry, 0),
     merchantName: sample.name,
     category: sample.category,
+    avoidability: sample.avoidability,
     paymentMethod: sample.payment,
     purchasedAt,
     total,

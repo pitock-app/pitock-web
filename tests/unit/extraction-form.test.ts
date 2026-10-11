@@ -24,6 +24,7 @@ const extraction: Extraction = {
   taxTotal: null,
   paymentMethod: "carta",
   category: "carburante",
+  avoidability: null,
   confidence: 0.5,
   notes: null,
   isCurrent: true,
@@ -43,6 +44,7 @@ const extraction: Extraction = {
       brand: null,
       size: null,
       sizeUnit: null,
+      avoidability: null,
     },
   ],
 };
@@ -65,6 +67,7 @@ describe("form di correzione dell'estrazione", () => {
       amount: "54,90",
       vatRate: "22",
       category: "carburante",
+      avoidability: "",
     });
   });
 
@@ -77,6 +80,7 @@ describe("form di correzione dell'estrazione", () => {
       currency: "EUR",
       category: "carburante",
       paymentMethod: "carta",
+      avoidability: null,
       merchantVat: "IT01234567890",
       taxTotal: null,
       notes: null,
@@ -105,6 +109,23 @@ describe("form di correzione dell'estrazione", () => {
     );
   });
 
+  it("conserva l'evitabilità di scontrino e righe e la cancella se svuotata", () => {
+    const classified = {
+      ...extraction,
+      avoidability: "essenziale" as const,
+      items: extraction.items.map((i) => ({ ...i, avoidability: "utile" as const })),
+    };
+    const values = extractionToFormValues(classified);
+    const patch = toExtractionPatch(extractionFormSchema.parse(values));
+    expect(patch.avoidability).toBe("essenziale");
+    expect(patch.items?.[0]).toMatchObject({ avoidability: "utile" });
+    values.avoidability = "";
+    values.items[0].avoidability = "superfluo";
+    const changed = toExtractionPatch(extractionFormSchema.parse(values));
+    expect(changed.avoidability).toBeNull();
+    expect(changed.items?.[0]).toMatchObject({ avoidability: "superfluo" });
+  });
+
   it("chiede di scegliere categoria e pagamento se l'estrazione non li ha", () => {
     const result = extractionFormSchema.safeParse(
       extractionToFormValues({ ...extraction, category: null, paymentMethod: null, total: null }),
@@ -125,6 +146,7 @@ describe("prodotto normalizzato nelle righe corrette", () => {
         brand: null,
         size: null,
         sizeUnit: null,
+        avoidability: null,
       },
     ],
   };

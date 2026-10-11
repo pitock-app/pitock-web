@@ -87,6 +87,10 @@
   --series-4: #eda100;
   --series-5: #e87ba4;
   --series-6: #4a3aa7;
+  /* Evitabilità: rampa ordinale arancio, dal chiaro (essenziale) allo scuro (superfluo). */
+  --avoid-essenziale: #f0a070;
+  --avoid-utile: #d95926;
+  --avoid-superfluo: #8a3010;
   /* Stato: verde per i risparmi, rosso per i rincari (testo AA sulla card). */
   --saving: #15803d;
   --increase: #b91c1c;
@@ -133,6 +137,10 @@
   --series-4: #c98500;
   --series-5: #d55181;
   --series-6: #9085e9;
+  /* Sul fondo scuro la rampa si inverte: il superfluo è il più chiaro. */
+  --avoid-essenziale: #a8461b;
+  --avoid-utile: #e8743f;
+  --avoid-superfluo: #fbc29c;
   --saving: #4ade80;
   --increase: #fca5a5;
   --sidebar: #0f172a;

@@ -18,6 +18,7 @@ const item = (id: string, description: string, amount: number) => ({
   brand: null,
   size: null,
   sizeUnit: null,
+  avoidability: null,
 });
 
 const extraction: Extraction = {
@@ -38,6 +39,7 @@ const extraction: Extraction = {
   taxTotal: null,
   paymentMethod: "carta",
   category: "alimentari",
+  avoidability: null,
   confidence: 0.5,
   notes: null,
   isCurrent: true,

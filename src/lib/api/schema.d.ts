@@ -2093,6 +2093,7 @@ export interface components {
             taxTotal: number | null;
             paymentMethod: components["schemas"]["PaymentMethod"] | null;
             category: components["schemas"]["Category"] | null;
+            avoidability: components["schemas"]["Avoidability"] | null;
             confidence: number | null;
             notes: string | null;
             isCurrent: boolean;
@@ -2105,6 +2106,11 @@ export interface components {
         PaymentMethod: "contanti" | "carta" | "bancomat" | "altro" | "sconosciuto";
         /** @enum {string} */
         Category: "alimentari" | "ristorazione" | "trasporti" | "carburante" | "salute" | "casa" | "abbigliamento" | "tecnologia" | "svago" | "servizi" | "igiene" | "altro";
+        /**
+         * @description Evitabilità della spesa: essenziale (necessità), utile (rimandabile o più economica), superfluo (evitabile)
+         * @enum {string}
+         */
+        Avoidability: "essenziale" | "utile" | "superfluo";
         ReceiptItem: {
             /** Format: uuid */
             id: string;
@@ -2121,6 +2127,7 @@ export interface components {
             /** @description Formato della confezione, in `sizeUnit` */
             size: number | null;
             sizeUnit: components["schemas"]["SizeUnit"] | null;
+            avoidability: components["schemas"]["Avoidability"] | null;
         };
         /** @enum {string} */
         SizeUnit: "g" | "kg" | "ml" | "cl" | "l" | "pz";
@@ -2136,6 +2143,7 @@ export interface components {
             taxTotal?: number;
             paymentMethod: components["schemas"]["PaymentMethod"];
             category: components["schemas"]["Category"];
+            avoidability?: components["schemas"]["Avoidability"];
             notes?: string;
             items?: {
                 description: string;
@@ -2149,6 +2157,7 @@ export interface components {
                 brand?: string | null;
                 size?: number | null;
                 sizeUnit?: components["schemas"]["SizeUnit"] | null;
+                avoidability?: components["schemas"]["Avoidability"] | null;
             }[];
         };
         ReceiptList: {
@@ -2187,6 +2196,7 @@ export interface components {
             taxTotal?: number | null;
             paymentMethod?: components["schemas"]["PaymentMethod"] | null;
             category?: components["schemas"]["Category"] | null;
+            avoidability?: components["schemas"]["Avoidability"] | null;
             notes?: string | null;
             items?: {
                 description: string;
@@ -2200,6 +2210,7 @@ export interface components {
                 brand?: string | null;
                 size?: number | null;
                 sizeUnit?: components["schemas"]["SizeUnit"] | null;
+                avoidability?: components["schemas"]["Avoidability"] | null;
             }[];
         };
         ReextractInput: {
@@ -2409,6 +2420,8 @@ export interface components {
             merchantOriginal: string | null;
             total: number | null;
             category: components["schemas"]["Category"];
+            /** @description Evitabilità dello scontrino nel complesso; null se non classificato */
+            avoidability: components["schemas"]["Avoidability"] | null;
             source: components["schemas"]["ReceiptSource"];
         };
         StatsItemFact: {
@@ -2423,6 +2436,8 @@ export interface components {
             brand: string | null;
             size: number | null;
             sizeUnit: ("g" | "kg" | "ml" | "cl" | "l" | "pz") | null;
+            /** @description Evitabilità della riga; null se non classificata (estrazioni prima del prompt v8) */
+            avoidability: components["schemas"]["Avoidability"] | null;
         };
     };
     responses: never;

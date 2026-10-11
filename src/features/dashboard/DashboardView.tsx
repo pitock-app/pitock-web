@@ -13,6 +13,12 @@ import { it } from "@/lib/i18n/it";
 import { lastDay, shiftMonth, ymd } from "@/lib/period";
 import { routes } from "@/lib/routes";
 import { cn } from "@/lib/utils";
+import {
+  AvoidabilityByCategory,
+  AvoidabilityByPeriod,
+  AvoidabilityOverview,
+  TopSuperfluous,
+} from "./AvoidabilityCharts";
 import { CategoryPie } from "./CategoryPie";
 import { DashboardSection } from "./DashboardSection";
 import { DimensionFilters } from "./DimensionFilters";
@@ -40,6 +46,7 @@ import {
   type Dataset,
   type DatasetFilters,
 } from "./lib/dataset";
+import { avoidabilitySummary } from "./lib/avoidability";
 import { FORECAST_HISTORY_MONTHS, forecastRange } from "./lib/forecast";
 import { productStats, toPurchases } from "./lib/products";
 import { PeriodBars } from "./PeriodBars";
@@ -157,6 +164,7 @@ export function DashboardView() {
       receipts,
       summary: summarize(receipts, amounts, granularity, lines),
       lines,
+      avoidability: avoidabilitySummary(lines),
       purchases,
       products: productStats(purchases),
     };
@@ -280,7 +288,7 @@ export function DashboardView() {
         />
       );
     }
-    const { summary, products, purchases, lines } = view;
+    const { summary, products, purchases, lines, avoidability } = view;
     return (
       <>
         {dataset.data?.truncated && (
@@ -323,6 +331,24 @@ export function DashboardView() {
               colorOf={colorOf}
             />
             <SourceSplit rows={summary.bySource} total={summary.totals.total} />
+          </div>
+        </DashboardSection>
+
+        <DashboardSection
+          id="avoidability"
+          title={t.sections.avoidability}
+          description={t.sections.avoidabilityDescription}
+        >
+          <div className="grid gap-4 lg:grid-cols-2">
+            <AvoidabilityOverview totals={avoidability} />
+            <AvoidabilityByCategory lines={lines} />
+            <AvoidabilityByPeriod
+              lines={lines}
+              granularity={summary.granularity}
+              keys={dataset.isPlaceholderData ? null : keys}
+              className="lg:col-span-2"
+            />
+            <TopSuperfluous lines={lines} className="lg:col-span-2" />
           </div>
         </DashboardSection>
 
