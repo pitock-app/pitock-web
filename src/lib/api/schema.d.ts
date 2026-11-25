@@ -1959,6 +1959,118 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/chat": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Domanda in linguaggio naturale sulle proprie spese */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["ChatRequest"];
+                };
+            };
+            responses: {
+                /** @description Risposta dell'assistente */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ChatResponse"];
+                    };
+                };
+                /** @description Richiesta non valida */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Token mancante o non valido */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Nessuna chiave salvata per il provider (USER_KEY_MISSING) */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Chiave utente non valida o senza credito */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Troppe richieste */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Errore interno */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Provider LLM non disponibile */
+                502: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Servizio temporaneamente non disponibile */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -2332,7 +2444,7 @@ export interface components {
             /** Format: date-time */
             createdAt: string;
             /** @enum {string} */
-            operation: "extract" | "reextract" | "key_test";
+            operation: "extract" | "reextract" | "key_test" | "chat";
             provider: string;
             model: string;
             /** @enum {string} */
@@ -2444,6 +2556,32 @@ export interface components {
             sizeUnit: ("g" | "kg" | "ml" | "cl" | "l" | "pz") | null;
             /** @description Evitabilità della riga; null se non classificata (estrazioni prima del prompt v8) */
             avoidability: components["schemas"]["Avoidability"] | null;
+        };
+        ChatResponse: {
+            answer: string;
+            /** @description true se ogni numero della risposta viene dai dati; false = risposta di ripiego, senza numeri */
+            grounded: boolean;
+            /** @description Grafici decisi dall'assistente, con i valori calcolati dal database */
+            charts: components["schemas"]["ChatChart"][];
+        };
+        ChatChart: {
+            /** @enum {string} */
+            type: "bar" | "line" | "pie";
+            title: string;
+            points: {
+                /** @description Categoria, mese (YYYY-MM), negozio o prodotto */
+                label: string;
+                /** @description Importo in euro, 2 decimali */
+                value: number;
+            }[];
+        };
+        ChatRequest: {
+            /** @description Conversazione dal più vecchio al più recente; il server non la salva. Ultimo messaggio: utente */
+            messages: {
+                /** @enum {string} */
+                role: "user" | "assistant";
+                content: string;
+            }[];
         };
     };
     responses: never;

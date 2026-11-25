@@ -10,7 +10,7 @@ import { ThemeToggle } from "./ThemeToggle";
 import { isNavItemActive, navItems } from "./nav-items";
 
 /** Navigazione laterale, visibile solo da md in su. */
-export function Sidebar({ account }: { account?: ReactNode }) {
+export function Sidebar({ account, chat }: { account?: ReactNode; chat?: ReactNode }) {
   const pathname = usePathname();
 
   return (
@@ -48,6 +48,7 @@ export function Sidebar({ account }: { account?: ReactNode }) {
             );
           })}
         </ul>
+        {chat && <div className="border-sidebar-border mt-2 border-t pt-2">{chat}</div>}
       </nav>
       <div className="border-sidebar-border flex flex-col gap-2 border-t px-3 py-2">
         {account}

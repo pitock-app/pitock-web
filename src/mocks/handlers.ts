@@ -421,6 +421,32 @@ export const handlers = [
     return HttpResponse.json<Schemas["Stats"]>(summarizeMockStats(email, query));
   }),
 
+  // Assistente finto: totale di tutto lo storico e grafico per categoria, senza modello.
+  http.post(`${API}/chat`, async ({ request }) => {
+    const email = authenticatedEmail(request);
+    if (!email) return unauthorized();
+    const body = (await request.json()) as { messages?: { role?: string }[] } | null;
+    if (!body?.messages?.length || body.messages.at(-1)?.role !== "user") {
+      return validationError("L'ultimo messaggio deve essere dell'utente");
+    }
+    const stats = summarizeMockStats(email, { granularity: "month" });
+    const euro = (n: number) => `${n.toFixed(2).replace(".", ",")} €`;
+    return HttpResponse.json<Schemas["ChatResponse"]>({
+      answer: `(Demo) In tutto hai speso ${euro(stats.totals.total)} su ${stats.totals.nReceipts} scontrini.`,
+      grounded: true,
+      charts:
+        stats.byCategory.length > 1
+          ? [
+              {
+                type: "bar",
+                title: "Spesa per categoria",
+                points: stats.byCategory.map((c) => ({ label: c.category, value: c.total })),
+              },
+            ]
+          : [],
+    });
+  }),
+
   http.get(`${API}/stats/dataset`, ({ request }) => {
     const email = authenticatedEmail(request);
     if (!email) return unauthorized();

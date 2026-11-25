@@ -12,10 +12,20 @@ type AppShellProps = {
   sidebarAccount?: ReactNode;
   /** Riquadro dell'account nell'header (mobile). */
   headerAccount?: ReactNode;
+  /** Pulsante dell'assistente sotto la navigazione della sidebar (desktop). */
+  sidebarChat?: ReactNode;
+  /** Pulsante dell'assistente nell'header (mobile). */
+  headerChat?: ReactNode;
 };
 
 /** Shell dell'app: sidebar su desktop, header e bottom nav su mobile. */
-export function AppShell({ children, sidebarAccount, headerAccount }: AppShellProps) {
+export function AppShell({
+  children,
+  sidebarAccount,
+  headerAccount,
+  sidebarChat,
+  headerChat,
+}: AppShellProps) {
   return (
     <div className="flex min-h-dvh">
       <a
@@ -24,7 +34,7 @@ export function AppShell({ children, sidebarAccount, headerAccount }: AppShellPr
       >
         {it.nav.skipToContent}
       </a>
-      <Sidebar account={sidebarAccount} />
+      <Sidebar account={sidebarAccount} chat={sidebarChat} />
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="bg-background/95 sticky top-0 z-30 flex h-14 items-center justify-between border-b pr-[max(1rem,env(safe-area-inset-right))] pl-[max(1rem,env(safe-area-inset-left))] backdrop-blur md:hidden">
           <Link
@@ -34,6 +44,7 @@ export function AppShell({ children, sidebarAccount, headerAccount }: AppShellPr
             <Logo size={28} />
           </Link>
           <div className="flex min-w-0 items-center gap-1">
+            {headerChat}
             {headerAccount}
             <ThemeToggle />
           </div>
