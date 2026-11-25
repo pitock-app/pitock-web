@@ -14,6 +14,7 @@ export function SourceSplit({ rows, total }: { rows: Summary["bySource"]; total:
         <NoData>{t.noData}</NoData>
       ) : (
         <BarList
+          id="by-source"
           rows={rows.map((row) => ({
             key: row.source,
             label: it.receiptSources[row.source],

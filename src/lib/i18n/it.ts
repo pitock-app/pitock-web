@@ -369,7 +369,7 @@ export const it = {
     loading: "Caricamento degli scontrini…",
   },
   receipt: {
-    backToList: "Scontrini",
+    back: "Indietro",
     loading: "Caricamento dello scontrino…",
     notFoundTitle: "Scontrino non trovato",
     notFoundDescription: "Lo scontrino non esiste o è stato eliminato.",

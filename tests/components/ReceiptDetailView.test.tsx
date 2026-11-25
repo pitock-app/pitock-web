@@ -12,7 +12,12 @@ import { renderWithQuery } from "../helpers/render";
 
 type Schemas = components["schemas"];
 
-const router = vi.hoisted(() => ({ push: vi.fn(), replace: vi.fn(), refresh: vi.fn() }));
+const router = vi.hoisted(() => ({
+  push: vi.fn(),
+  replace: vi.fn(),
+  refresh: vi.fn(),
+  back: vi.fn(),
+}));
 const provider = vi.hoisted(() => ({ current: null as unknown }));
 
 vi.mock("next/navigation", () => ({ useRouter: () => router }));
@@ -84,6 +89,28 @@ describe("ReceiptDetailView", () => {
     await user.click(screen.getByRole("button", { name: "Salva modifiche" }));
     expect(await screen.findByText("Inserisci il nome dell'esercente.")).toBeInTheDocument();
     expect(patch).not.toHaveBeenCalled();
+  });
+
+  it("Indietro torna alla pagina precedente dell'app, o all'elenco se non ce n'è una", async () => {
+    const user = userEvent.setup();
+    const id = await sampleId("status=extracted");
+    // jsdom non ha la Navigation API: la si simula.
+    const navigation = { canGoBack: true, currentEntry: { index: 1 }, entries: () => [] };
+    vi.stubGlobal("navigation", navigation);
+    try {
+      renderWithQuery(<ReceiptDetailView id={id} />);
+      const back = await screen.findByRole("button", { name: "Indietro" });
+      await user.click(back);
+      expect(router.back).toHaveBeenCalledOnce();
+      expect(router.push).not.toHaveBeenCalled();
+
+      navigation.canGoBack = false;
+      await user.click(back);
+      expect(router.push).toHaveBeenCalledWith("/receipts");
+      expect(router.back).toHaveBeenCalledOnce();
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
 
   it("con ?edit=1 porta il focus sul primo campo", async () => {

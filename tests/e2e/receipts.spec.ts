@@ -30,11 +30,8 @@ test("modifica del totale: la lista mostra il nuovo valore", async ({ page }) =>
   await expect(page.getByText("Modifiche salvate.")).toBeVisible();
   await expect(page.getByTestId("extraction-history-item").first()).toContainText("Modificata");
 
-  await page
-    .getByRole("link", { name: "Scontrini", exact: true })
-    .filter({ visible: true })
-    .first()
-    .click();
+  // "Indietro" torna alla lista da cui si era partiti.
+  await page.getByRole("button", { name: "Indietro" }).click();
   await expect(page).toHaveURL(/\/receipts$/);
   await expect(receiptItems(page).filter({ hasText: /123,45\s€/ })).toHaveCount(1);
 });

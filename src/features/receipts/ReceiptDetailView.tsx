@@ -5,13 +5,14 @@ import { AlertCircle, ArrowLeft, Loader2, Settings, UploadCloud } from "lucide-r
 import Link from "next/link";
 import { useEffect, useRef } from "react";
 import { EmptyState, ErrorState, PageHeader } from "@/components/layout";
-import { buttonVariants } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { apiErrorMessage, isApiError, needsAiSettings, suggestsOwnKey } from "@/lib/api/errors";
 import { queryKeys } from "@/lib/api/query-keys";
 import type { components } from "@/lib/api/schema";
 import { formatDateTime } from "@/lib/format";
 import { it } from "@/lib/i18n/it";
+import { useBack } from "@/lib/navigation";
 import { routes } from "@/lib/routes";
 import { cn } from "@/lib/utils";
 import { DeleteReceiptDialog } from "./DeleteReceiptDialog";
@@ -30,15 +31,14 @@ type ReceiptDetail = components["schemas"]["ReceiptDetail"];
 
 const t = it.receipt;
 
+/** Come l'indietro del sistema; aperto da un link diretto porta all'elenco degli scontrini. */
 function BackLink() {
+  const back = useBack(routes.receipts);
   return (
-    <Link
-      href={routes.receipts}
-      className={cn(buttonVariants({ variant: "ghost" }), "mb-2 -ml-2 h-11 w-fit")}
-    >
+    <Button variant="ghost" className="mb-2 -ml-2 h-11 w-fit" onClick={back}>
       <ArrowLeft aria-hidden />
-      {t.backToList}
-    </Link>
+      {t.back}
+    </Button>
   );
 }
 

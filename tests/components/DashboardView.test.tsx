@@ -1,4 +1,5 @@
-import { fireEvent, screen, within } from "@testing-library/react";
+import { QueryClientProvider } from "@tanstack/react-query";
+import { act, fireEvent, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { HttpResponse, http } from "msw";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -33,6 +34,23 @@ vi.mock("@/lib/auth", async (importOriginal) => ({
 }));
 
 setupMswServer();
+
+/**
+ * Il router finto non cambia l'URL: si applica a mano l'ultima navigazione (push o replace)
+ * e si rende di nuovo, come farebbe Next dopo `router.push`.
+ */
+function followNavigation(rerender: () => void) {
+  const calls = [nav.router.push, nav.router.replace].flatMap((fn) =>
+    fn.mock.calls.map((call, i) => ({
+      url: call[0] as string,
+      order: fn.mock.invocationCallOrder[i]!,
+    })),
+  );
+  const last = calls.sort((a, b) => b.order - a.order)[0];
+  if (!last) throw new Error("Nessuna navigazione da applicare");
+  nav.search = new URLSearchParams(last.url.split("?")[1] ?? "");
+  act(rerender);
+}
 
 /** Importo come lo legge Testing Library, che normalizza gli spazi. */
 const money = (value: number) => formatCurrency(value).replace(/\s/g, " ");
@@ -204,12 +222,24 @@ describe("DashboardView", () => {
   it("al clic su una categoria mostra le sue voci riga per riga, con il totale della fetta", async () => {
     const user = userEvent.setup();
     mockDataset({ current: dataset });
-    renderWithQuery(<DashboardView />);
+    const view = renderWithQuery(<DashboardView />);
+    const rerender = () =>
+      view.rerender(
+        <QueryClientProvider client={view.queryClient}>
+          <DashboardView />
+        </QueryClientProvider>,
+      );
     const legend = await screen.findByTestId("category-legend");
     // r4 (casa, 30 €): detersivo 2,50 € in casa, latte 1,59 € in alimentari, il resto in casa.
     const casa = within(legend).getByRole("button", { name: /Casa/ });
     expect(casa).toHaveTextContent(money(28.41));
     await user.click(casa);
+    // La categoria aperta va nell'URL con una nuova voce di cronologia.
+    expect(nav.router.push).toHaveBeenLastCalledWith(
+      "/dashboard?period=custom&from=2026-09-01&to=2026-09-30&pie=casa",
+      { scroll: false },
+    );
+    followNavigation(rerender);
     const card = screen.getByRole("region", { name: "Per categoria" });
     const purchase = within(card).getByRole("link", { name: /Detersivo piatti/ });
     expect(purchase).toHaveAttribute("href", "/receipts/r4");
@@ -223,6 +253,7 @@ describe("DashboardView", () => {
       `2 voci · ${money(28.41)}`,
     );
     await user.click(within(card).getByRole("button", { name: "Tutte le categorie" }));
+    followNavigation(rerender);
     expect(within(card).getByTestId("category-legend")).toBeInTheDocument();
   });
 
@@ -274,23 +305,32 @@ describe("DashboardView", () => {
       ),
     };
     mockDataset({ current: classified });
-    renderWithQuery(<DashboardView />);
+    const view = renderWithQuery(<DashboardView />);
+    const rerender = () =>
+      view.rerender(
+        <QueryClientProvider client={view.queryClient}>
+          <DashboardView />
+        </QueryClientProvider>,
+      );
     // Classificati: 60 essenziale, 2,50 utile, 20 superfluo → (1,25 + 20) / 82,50 = 26.
     expect(await screen.findByTestId("avoidability-index")).toHaveTextContent("26");
     expect(screen.getByTestId("avoidability-avoidable")).toHaveTextContent(money(21.25));
     expect(screen.getByText(/di spesa non ancora classificata/)).toBeInTheDocument();
     const card = screen.getByRole("region", { name: "Indice di evitabilità" });
     await user.click(within(card).getByRole("button", { name: /Superfluo/ }));
+    followNavigation(rerender);
     expect(within(card).getByTestId("avoidability-purchases-total")).toHaveTextContent(money(20));
     expect(within(card).getByRole("link", { name: /Latte intero 1L/ })).toHaveAttribute(
       "href",
       "/receipts/r1",
     );
     await user.click(within(card).getByRole("button", { name: "Tutti i livelli" }));
+    followNavigation(rerender);
     expect(within(card).getByTestId("avoidability-index")).toBeInTheDocument();
 
     const byPeriod = screen.getByRole("region", { name: /Evitabilità per/ });
     await user.click(within(byPeriod).getByRole("button", { name: /Utile/ }));
+    followNavigation(rerender);
     expect(within(byPeriod).getByRole("link", { name: /Detersivo/i })).toBeInTheDocument();
   });
 

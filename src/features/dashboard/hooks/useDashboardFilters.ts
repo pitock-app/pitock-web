@@ -9,6 +9,8 @@ import {
 } from "../lib/dashboard-period";
 import type { DatasetFilters } from "../lib/dataset";
 
+const FILTER_KEYS = ["period", "from", "to", "store", "category"];
+
 /**
  * Periodo, negozio e categoria della dashboard, letti dalla query string e riscritti con
  * `router.replace`: i filtri restano nell'URL e quindi condivisibili.
@@ -28,7 +30,11 @@ export function useDashboardFilters() {
 
   const writeFilters = (next: DashboardFilters) => {
     latestFilters.current = next;
-    const search = serializeDashboardFilters(next).toString();
+    // Gli altri parametri (livelli aperti dei grafici, liste espanse) restano com'erano.
+    const params = new URLSearchParams(searchParams);
+    for (const key of FILTER_KEYS) params.delete(key);
+    for (const [key, value] of serializeDashboardFilters(next)) params.set(key, value);
+    const search = params.toString();
     router.replace(search ? `${pathname}?${search}` : pathname, { scroll: false });
   };
   // Il selettore del periodo non conosce negozio e categoria: si conservano.

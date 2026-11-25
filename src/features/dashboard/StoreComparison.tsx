@@ -1,9 +1,9 @@
 "use client";
 
 import { Check } from "lucide-react";
-import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { it } from "@/lib/i18n/it";
+import { useUrlExpanded } from "@/lib/navigation";
 import { RANKING_LIMIT } from "./BarList";
 import { ChartCard, DataTable, NoData } from "./ChartCard";
 import { SAVING } from "./lib/colors";
@@ -20,7 +20,7 @@ type StoreComparisonProps = {
 
 /** Prezzo medio dello stesso prodotto nei diversi negozi; il più economico in verde. */
 export function StoreComparison({ products, colorOf }: StoreComparisonProps) {
-  const [expanded, setExpanded] = useState(false);
+  const [expanded, toggleExpanded] = useUrlExpanded("store-comparison");
   const rows = storeComparison(products);
   const shown = expanded ? rows : rows.slice(0, RANKING_LIMIT);
   return (
@@ -110,7 +110,7 @@ export function StoreComparison({ products, colorOf }: StoreComparisonProps) {
               size="sm"
               className="h-11 self-start"
               aria-expanded={expanded}
-              onClick={() => setExpanded((value) => !value)}
+              onClick={toggleExpanded}
             >
               {expanded ? t.showLess : t.showAll(rows.length)}
             </Button>

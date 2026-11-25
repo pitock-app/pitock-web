@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from "react";
 import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts";
 import { formatCurrency, formatNumber, formatShare } from "@/lib/format";
 import { it } from "@/lib/i18n/it";
+import { useUrlParam } from "@/lib/navigation";
 import { ChartCard, DataTable, NoData, shareOf, tooltipStyle } from "./ChartCard";
 import { LineDrill } from "./LineDrill";
 import { categoryColor } from "./lib/colors";
@@ -25,7 +25,9 @@ type CategoryPieProps = {
  * recente. Fette e voci seguono la categoria della riga, quindi la somma delle voci è la fetta.
  */
 export function CategoryPie({ rows, total, lines }: CategoryPieProps) {
-  const [selected, setSelected] = useState<Category | null>(null);
+  // La categoria aperta sta nell'URL: la si ritrova tornando da uno scontrino.
+  const drill = useUrlParam("pie");
+  const selected = drill.value as Category | null;
   const slices = rows.map((row) => ({
     ...row,
     label: it.categories[row.category],
@@ -68,7 +70,7 @@ export function CategoryPie({ rows, total, lines }: CategoryPieProps) {
           lines={categoryLines}
           color={categoryColor(active)}
           backLabel={t.categoryDrill.back}
-          onBack={() => setSelected(null)}
+          onBack={drill.close}
           testId="category-purchases-total"
         />
       ) : (
@@ -87,7 +89,10 @@ export function CategoryPie({ rows, total, lines }: CategoryPieProps) {
                   isAnimationActive={false}
                   rootTabIndex={-1}
                   className="cursor-pointer"
-                  onClick={(_, index) => setSelected(pieSlices[index]?.category ?? null)}
+                  onClick={(_, index) => {
+                    const category = pieSlices[index]?.category;
+                    if (category) drill.open(category);
+                  }}
                 >
                   {pieSlices.map((slice) => (
                     <Cell key={slice.category} fill={slice.color} />
@@ -106,7 +111,7 @@ export function CategoryPie({ rows, total, lines }: CategoryPieProps) {
                 <li key={slice.category}>
                   <button
                     type="button"
-                    onClick={() => setSelected(slice.category)}
+                    onClick={() => drill.open(slice.category)}
                     className="hover:bg-muted/60 focus-visible:ring-ring/50 flex min-h-9 w-full items-center gap-2 rounded-md px-1 text-left outline-none focus-visible:ring-[3px]"
                   >
                     <span

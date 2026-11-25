@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
 import { formatCurrency, formatNumber, formatShare } from "@/lib/format";
 import { it } from "@/lib/i18n/it";
+import { useUrlParam } from "@/lib/navigation";
 import { cn } from "@/lib/utils";
 import { bucketLabel, bucketOpacity, LEVEL_BUTTON, Swatch } from "./avoidability-ui";
 import { ChartCard, DataTable, NoData, shareOf } from "./ChartCard";
@@ -32,7 +32,9 @@ export function AvoidabilityOverview({
   lines: CategoryLine[];
   className?: string;
 }) {
-  const [selected, setSelected] = useState<AvoidabilityBucket | null>(null);
+  // Il livello aperto sta nell'URL: lo si ritrova tornando da uno scontrino.
+  const drill = useUrlParam("avoid");
+  const selected = drill.value as AvoidabilityBucket | null;
   const { amounts, index } = totals;
   const all = AVOIDABILITY_BUCKETS.reduce((sum, bucket) => sum + Math.max(amounts[bucket], 0), 0);
   const buckets = AVOIDABILITY_BUCKETS.filter((bucket) => amounts[bucket] > 0);
@@ -65,7 +67,7 @@ export function AvoidabilityOverview({
           lines={avoidabilityLines(lines, active)}
           color={AVOIDABILITY_COLORS[active]}
           backLabel={t.back}
-          onBack={() => setSelected(null)}
+          onBack={drill.close}
           testId="avoidability-purchases-total"
         />
       ) : index === null && buckets.length === 0 ? (
@@ -94,7 +96,7 @@ export function AvoidabilityOverview({
                 key={bucket}
                 type="button"
                 tabIndex={-1}
-                onClick={() => setSelected(bucket)}
+                onClick={() => drill.open(bucket)}
                 className="h-full cursor-pointer transition-[filter,transform] first:rounded-l-full last:rounded-r-full hover:scale-y-125 hover:brightness-110"
                 title={`${bucketLabel(bucket)}: ${formatCurrency(amounts[bucket])}`}
                 style={{
@@ -111,7 +113,7 @@ export function AvoidabilityOverview({
                 <li key={bucket}>
                   <button
                     type="button"
-                    onClick={() => setSelected(bucket)}
+                    onClick={() => drill.open(bucket)}
                     className={cn(
                       LEVEL_BUTTON,
                       "flex min-h-9 w-full items-center gap-2 px-1 text-left",

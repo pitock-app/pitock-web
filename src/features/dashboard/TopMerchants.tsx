@@ -31,6 +31,7 @@ export function TopMerchants({ rows, withoutMerchant, total, colorOf }: TopMerch
         <NoData>{t.noData}</NoData>
       ) : (
         <BarList
+          id="top-merchants"
           rows={[
             ...rows.map((row) => ({
               key: row.merchantName,

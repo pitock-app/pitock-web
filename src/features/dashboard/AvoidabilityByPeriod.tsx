@@ -13,6 +13,7 @@ import {
 } from "recharts";
 import { formatCompactCurrency, formatCurrency, formatNumber, formatPeriodKey } from "@/lib/format";
 import { it } from "@/lib/i18n/it";
+import { useUrlParam } from "@/lib/navigation";
 import { cn } from "@/lib/utils";
 import { bucketLabel, bucketOpacity, DIMMED, LEVEL_BUTTON, Swatch } from "./avoidability-ui";
 import { axisTick, ChartCard, DataTable, NoData, tooltipStyle } from "./ChartCard";
@@ -89,10 +90,12 @@ export function AvoidabilityByPeriod({
   keys: string[] | null;
   className?: string;
 }) {
-  const [selected, setSelected] = useState<{
-    bucket: AvoidabilityBucket;
-    period: string | null;
-  } | null>(null);
+  // Livello (e periodo) aperto nell'URL, come "superfluous" o "superfluous:2026-03".
+  const drill = useUrlParam("avoidPeriod");
+  const [drillBucket, drillPeriod] = drill.value?.split(":") ?? [];
+  const selected = drillBucket
+    ? { bucket: drillBucket as AvoidabilityBucket, period: drillPeriod ?? null }
+    : null;
   const [hoverPeriod, setHoverPeriod] = useState<number | null>(null);
   const [hoverBucket, setHoverBucket] = useState<AvoidabilityBucket | null>(null);
   const rows = avoidabilityByPeriod(lines, granularity, keys);
@@ -154,7 +157,7 @@ export function AvoidabilityByPeriod({
           lines={avoidabilityLines(lines, active.bucket, active.period)}
           color={AVOIDABILITY_COLORS[active.bucket]}
           backLabel={t.back}
-          onBack={() => setSelected(null)}
+          onBack={drill.close}
           testId="avoidability-period-purchases-total"
         />
       ) : buckets.length === 0 ? (
@@ -166,7 +169,7 @@ export function AvoidabilityByPeriod({
               <li key={bucket}>
                 <button
                   type="button"
-                  onClick={() => setSelected({ bucket, period: null })}
+                  onClick={() => drill.open(bucket)}
                   onMouseEnter={() => setHoverBucket(bucket)}
                   onMouseLeave={() => setHoverBucket(null)}
                   onFocus={() => setHoverBucket(bucket)}
@@ -235,7 +238,7 @@ export function AvoidabilityByPeriod({
                     className="cursor-pointer"
                     onClick={(_, index) => {
                       const period = data[index]?.period;
-                      if (period) setSelected({ bucket, period });
+                      if (period) drill.open(`${bucket}:${period}`);
                     }}
                   >
                     {data.map((entry, index) => {

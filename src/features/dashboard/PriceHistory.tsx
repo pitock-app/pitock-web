@@ -13,6 +13,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { formatCompactCurrency, formatDate, formatShortDay } from "@/lib/format";
 import { it } from "@/lib/i18n/it";
+import { useUrlParam } from "@/lib/navigation";
 import { axisTick, ChartCard, DataTable, NoData, tooltipStyle } from "./ChartCard";
 import { priceHistory } from "./lib/product-insights";
 import type { ProductStats, Purchase } from "./lib/products";
@@ -42,7 +43,9 @@ export function PriceHistory({ products, purchases, colorOf }: PriceHistoryProps
         .sort((a, b) => b.days - a.days || b.totalSpent - a.totalSpent),
     [products],
   );
-  const [selectedKey, setSelectedKey] = useState<string | null>(null);
+  // Il prodotto scelto sta nell'URL (sul posto: non è un passo della cronologia).
+  const product = useUrlParam("product");
+  const selectedKey = product.value;
   const needle = search.trim().toLowerCase();
   const matches = needle
     ? candidates.filter((p) => p.label.toLowerCase().includes(needle))
@@ -81,7 +84,7 @@ export function PriceHistory({ products, purchases, colorOf }: PriceHistoryProps
           id={selectId}
           className={selectClass}
           value={selected?.key ?? ""}
-          onChange={(event) => setSelectedKey(event.target.value)}
+          onChange={(event) => product.set(event.target.value)}
           disabled={matches.length === 0}
         >
           {matches.map((p) => (

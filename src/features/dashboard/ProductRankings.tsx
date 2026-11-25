@@ -50,6 +50,7 @@ export function TopProducts({ products }: { products: ProductStats[] }) {
         <NoData>{t.noProducts}</NoData>
       ) : (
         <BarList
+          id="top-products"
           rows={products.map((p) => ({
             key: p.key,
             label: p.label,
@@ -93,6 +94,7 @@ export function SavingsRanking({ products }: { products: ProductStats[] }) {
         <NoData>{t.savings.none}</NoData>
       ) : (
         <BarList
+          id="savings-ranking"
           rows={rows.map((p) => ({
             key: p.key,
             label: p.label,
@@ -139,6 +141,7 @@ export function PriceChanges({ products }: { products: ProductStats[] }) {
         <NoData>{t.priceChanges.none}</NoData>
       ) : (
         <BarList
+          id="price-changes"
           rows={rows.map((p) => {
             const up = p.priceChange > 0;
             return {

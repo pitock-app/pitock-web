@@ -51,6 +51,7 @@ export function LineDrill({ lines, color, backLabel, onBack, testId }: LineDrill
             {t.lines(lines.length)} · {formatCurrency(total)}
           </p>
           <BarList
+            id={testId}
             rows={lines.map((line) => ({
               key: line.key,
               label: lineLabel(line),

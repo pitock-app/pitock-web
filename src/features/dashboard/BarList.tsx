@@ -1,10 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { useState, type ReactNode } from "react";
+import type { ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import { formatCurrency } from "@/lib/format";
 import { it } from "@/lib/i18n/it";
+import { useUrlExpanded } from "@/lib/navigation";
 import { cn } from "@/lib/utils";
 
 const t = it.dashboard;
@@ -33,6 +34,8 @@ export type BarListRow = {
 };
 
 type BarListProps = {
+  /** Nome della lista nell'URL: "Mostra tutti" si ritrova tornando indietro. */
+  id: string;
   rows: BarListRow[];
   /** Oltre questo numero di righe compare "Mostra tutti". */
   limit?: number;
@@ -44,8 +47,8 @@ type BarListProps = {
  * Elenco con barre orizzontali proporzionali al valore più alto. I valori sono sempre scritti
  * accanto alla barra: il grafico si legge anche senza colori.
  */
-export function BarList({ rows, limit = RANKING_LIMIT, onSelect }: BarListProps) {
-  const [expanded, setExpanded] = useState(false);
+export function BarList({ id, rows, limit = RANKING_LIMIT, onSelect }: BarListProps) {
+  const [expanded, toggleExpanded] = useUrlExpanded(id);
   const shown = expanded ? rows : rows.slice(0, limit);
   const max = Math.max(...rows.map((row) => Math.abs(row.value)), 0);
   return (
@@ -99,7 +102,7 @@ export function BarList({ rows, limit = RANKING_LIMIT, onSelect }: BarListProps)
           size="sm"
           className="h-11 self-start"
           aria-expanded={expanded}
-          onClick={() => setExpanded((value) => !value)}
+          onClick={toggleExpanded}
         >
           {expanded ? t.showLess : t.showAll(rows.length)}
         </Button>
